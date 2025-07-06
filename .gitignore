@@ -206,6 +206,7 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
+
 # macOS
 .DS_Store
 
@@ -213,3 +214,6 @@ __marimo__/
 Thumbs.db
 ehthumbs.db
 desktop.ini
+
+# 환경변수 파일
+.env
