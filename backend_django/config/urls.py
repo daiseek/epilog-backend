@@ -21,4 +21,7 @@ from django_prometheus import exports
 urlpatterns = [
     path('admin/', admin.site.urls),
     path("metrics", exports.ExportToDjangoView),
+
+    path('books/', include('books.urls')),  # Books 애플리케이션의 URL 포함
+    path('characters/', include('characters.urls')),  # Characters 애플리케이션의
 ]
