@@ -124,7 +124,7 @@ CACHES = {
     # 대본 임시저장용 캐시
     'script_cache': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': f'redis://{env("REDIS_HOST", default="6379")}:{env("REDIS_PORT", default="6379")}/2',  # 1~15번까지 설정 가능
+        'LOCATION': f'redis://{env("REDIS_HOST", default="backend-redis")}:{env("REDIS_PORT", default="6379")}/2',  # 1~15번까지 설정 가능
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
         }    
