@@ -8,13 +8,19 @@ import re
 # settings.py에서 OPENAI_API_KEY를 가져옴.
 client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
 
-# GPT-4o 모델로 대본 생성하기
+'''GPT로 대본을 생성하는 함수'''
 def generate_scenes_with_gpt(main_character, sub_characters, scene_count):
     # 주연 캐릭터 정보 분해
     main_name = main_character.characterName
     age = main_character.age
     gender = main_character.gender
     description = main_character.characterDescription
+
+    # 책 정보
+    book = main_character.book
+    book_title = book.title
+    book_content = book.content
+
 
     # 조연 캐릭터 정보 정리
     sub_info = ""
@@ -23,6 +29,12 @@ def generate_scenes_with_gpt(main_character, sub_characters, scene_count):
 
     # 프롬프트 구성
     prompt = f"""
+다음은 소설 정보입니다.
+
+[소설 정보]
+제목: {book_title}
+내용: {book_content}
+
 다음은 브이로그 영상의 주인공과 조연들입니다.
 
 [주인공]
@@ -68,7 +80,7 @@ def generate_scenes_with_gpt(main_character, sub_characters, scene_count):
     )
 
     content = response.choices[0].message.content
-    print("🧠 GPT 응답:\n", content)  # 디버깅용 로그
+    print("🧠 대본 생성 GPT 응답:\n", content)  # 디버깅용 로그
     return content
 
 
@@ -109,3 +121,49 @@ def clean_gpt_response(text):
     if "```" in text:
         text = text.split("```", 1)[0]
     return text.strip()
+
+
+'''GPT로 캐릭터 정보 생성 함수'''
+def generate_characters_with_gpt(title: str, content: str):
+    prompt = f"""
+다음은 소설의 제목과 내용입니다.
+
+제목: {title}
+내용: {content}
+
+요청 사항:
+- 등장인물들을 JSON 배열 형식으로 출력해줘.
+    - 각 인물은 다음 정보를 포함해야 해:
+    - characterName: 이름
+    - isMain: 주인공 여부 (true/false)
+    - age: 나이 (정수)
+    - gender: 성별 ("남성"/"여성" 등)
+    - characterDescription: 인물의 성격, 역할, 외형 등을 설명하는 문장
+
+- 설명 없이 JSON만 순수하게 출력해줘.
+- 꼭 유효한 JSON 형식만 출력해줘.
+- 문자열은 반드시 큰따옴표(")로 감싸줘.
+- JSON 배열은 다음과 같은 형식이야:
+
+예시:
+[
+  {{
+    "characterName": "어린 왕자",
+    "isMain": true,
+    "age": 10,
+    "gender": "남성",
+    "characterDescription": "별을 여행하며 사람들과 교감하는 소년"
+  }},
+  ...
+]
+"""
+
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.3,
+    )
+
+    content = response.choices[0].message.content
+    print("🧠 캐릭터 생성 GPT 응답:\n", content)
+    return content
