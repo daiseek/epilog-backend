@@ -3,18 +3,18 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.core.cache import caches
-from .gpt_client import generate_scenes_with_gpt, parse_scene_list
+from .gpt_client import (
+    generate_scenes_with_gpt,
+    generate_characters_with_gpt,
+    parse_scene_list  # parse_scene_list를 parse_character_list로 rename해도 됨
+)
 import uuid
-
 
 from .models import Character
 from books.models import Book
 
-# Create your views here.
-
-''' 캐릭터 생성 혹은 조회 기능'''
+''' 캐릭터 생성 혹은 조회 기능 '''
 class CharacterConditionalCreateOrListView(APIView):
-    
     """
     POST /characters/books/{bookId}
     캐릭터가 존재하면 목록 조회, 없으면 새로 생성하는 함수
@@ -25,7 +25,6 @@ class CharacterConditionalCreateOrListView(APIView):
         except Book.DoesNotExist:
             return Response({'error': 'Book not found'}, status=404)
 
-        # 캐릭터가 존재하면 목록 조회
         existing_characters = Character.objects.filter(book=book, is_deleted=False)
         if existing_characters.exists():
             data = [
@@ -41,30 +40,49 @@ class CharacterConditionalCreateOrListView(APIView):
             ]
             return Response(data, status=200)
 
-        # 없으면 새로 생성
-        # 나중에 GPT로 생성하는 로직 추가 필요!!
-        data = request.data
-        character = Character.objects.create(
-            characterName=data.get('characterName'),
-            isMain=data.get('isMain', False),
-            age=data.get('age'),
-            gender=data.get('gender'),
-            characterDescription=data.get('characterDescription'),
-            book=book
-        )
-        return Response({'id': character.id, 'characterName': character.characterName}, status=201)
-    
+        # GPT 호출로 캐릭터 생성
+        try:
+            raw_text = generate_characters_with_gpt(book.title, book.content)
+            character_data_list = parse_scene_list(raw_text)
+        except Exception as e:
+            return Response({'error': f'GPT 호출 실패: {str(e)}'}, status=500)
 
-'''대본 생성 기능'''
+        # 캐릭터 저장
+        created_characters = []
+        for data in character_data_list:
+            try:
+                character = Character.objects.create(
+                    characterName=data.get('characterName'),
+                    isMain=data.get('isMain', False),
+                    age=data.get('age'),
+                    gender=data.get('gender'),
+                    characterDescription=data.get('characterDescription'),
+                    book=book
+                )
+                created_characters.append({
+                    'id': character.id,
+                    'characterName': character.characterName,
+                    'isMain': character.isMain,
+                    'age': character.age,
+                    'gender': character.gender,
+                    'characterDescription': character.characterDescription
+                })
+            except Exception as e:
+                print(f"⚠️ 캐릭터 저장 실패: {e}")
+                continue
+
+        return Response(created_characters, status=201)
+
+
+''' 대본 생성 기능 '''
 class ScriptGenerateView(APIView):
-   def post(self, request, character_id):
-        try: # 주연 캐릭터 조회
+    def post(self, request, character_id):
+        try:
             character = Character.objects.get(id=character_id, is_deleted=False)
         except Character.DoesNotExist:
             return Response({'error': 'Character not found'}, status=404)
 
-        # 장면 개수 결정 
-        # 추후 수정 필요!!
+        # 장면 개수 결정
         desc_length = len(character.characterDescription)
         scene_count = 2 if desc_length < 100 else 3 if desc_length < 200 else 4 if desc_length < 400 else 5
 
@@ -72,11 +90,6 @@ class ScriptGenerateView(APIView):
         sub_characters = Character.objects.filter(
             book=character.book, isMain=False, is_deleted=False
         ).exclude(id=character.id)
-
-        sub_info = "\n".join([
-            f"- {c.characterName} ({c.age}살, {c.gender}): {c.characterDescription}"
-            for c in sub_characters
-        ]) if sub_characters.exists() else None
 
         # GPT 호출
         try:
@@ -88,22 +101,26 @@ class ScriptGenerateView(APIView):
         except Exception as e:
             return Response({'error': f'GPT 호출 실패: {str(e)}'}, status=500)
 
-        # 파싱 및 저장
-        scene_texts = parse_scene_list(raw_text)
-        generated_scenes = [
-        {
-        "sceneId": scene.get("scene"),
-        "lines": scene.get("lines"),
-        "video_job_id": f"job-{uuid.uuid4()}"
-        }
-        for scene in scene_texts
-        ]
+        # 파싱 및 Redis 캐시 저장
+        try:
+            scene_texts = parse_scene_list(raw_text)
+            generated_scenes = [
+                {
+                    "sceneId": scene.get("scene"),
+                    "lines": scene.get("lines"),
+                    "video_job_id": f"job-{uuid.uuid4()}"
+                }
+                for scene in scene_texts
+            ]
 
-        cache_key = f"script:{character_id}"
-        script_cache = caches['script_cache']
-        script_cache.set(cache_key, generated_scenes, timeout=600)
+            cache_key = f"script:{character_id}"
+            script_cache = caches['script_cache']
+            script_cache.set(cache_key, generated_scenes, timeout=600)
 
-        return Response({
-            "characterId": character_id,
-            "scenes": generated_scenes
-        }, status=201)
+            return Response({
+                "characterId": character_id,
+                "scenes": generated_scenes
+            }, status=201)
+
+        except Exception as e:
+            return Response({'error': f'응답 파싱 또는 캐싱 실패: {str(e)}'}, status=500)
