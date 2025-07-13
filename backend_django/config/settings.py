@@ -41,11 +41,15 @@ BACKEND_DOMAIN = 'localhost:8000'
 # 배포 환경 포트
 # BACKEND_DOMAIN = '백엔드배포사이트주소'
 
+# OpenAI API 키
+OPENAI_API_KEY = env('OPENAI_API_KEY')
 
 # Application definition
 
 INSTALLED_APPS = [
     # API 개발시 생성한 애플리케이션 명시
+    'books', # Books 애플리케이션 추가
+    'characters', # Characters 애플리케이션 추가
 
     'django_prometheus', # Django Prometheus 추가
     'rest_framework', # Django REST framework 추가
@@ -107,12 +111,24 @@ DATABASES = {
 # Caching : Redis를 임시저장소/캐시 용도로 사용
 # https://docs.djangoproject.com/en/5.2/topics/cache/
 CACHES = {
-    'default': { # default 이름으로 캐시 설정
+
+    # 기본 캐시 설정
+    'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': f'redis://{env("REDIS_HOST", default="localhost")}:{env("REDIS_PORT", default="6379")}/1',  # Redis DB
+        'LOCATION': f'redis://{env("REDIS_HOST", default="backend-redis")}:{env("REDIS_PORT", default="6379")}/1',
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        }
+    },
+
+    # 대본 임시저장용 캐시
+    'script_cache': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': f'redis://{env("REDIS_HOST", default="6379")}:{env("REDIS_PORT", default="6379")}/2',  # 1~15번까지 설정 가능
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        }    
     }
-    # Redis 설정을 커스텀 하려면 사용
-    # 'OPTIONS': {
 }
 
 
