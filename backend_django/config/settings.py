@@ -51,6 +51,8 @@ INSTALLED_APPS = [
     'books', # Books 애플리케이션 추가
     'characters', # Characters 애플리케이션 추가
 
+    # 's3test', # S3 테스트용 앱
+
     'django_prometheus', # Django Prometheus 추가
     'rest_framework', # Django REST framework 추가
     'storages', # Django Storages 추가

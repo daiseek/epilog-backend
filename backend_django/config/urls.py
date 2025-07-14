@@ -23,5 +23,7 @@ urlpatterns = [
     path("metrics", exports.ExportToDjangoView),
 
     path('books/', include('books.urls')),  # Books 애플리케이션의 URL 포함
-    path('characters/', include('characters.urls')),  # Characters 애플리케이션의
+    path('characters/', include('characters.urls')),  # Characters 애플리케이션의 URL 포함
+
+    # path('s3test/', include('s3test.urls')),  # S3 테스트용 앱의 URL 포함
 ]
