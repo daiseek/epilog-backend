@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     # API 개발시 생성한 애플리케이션 명시
     'books', # Books 애플리케이션 추가
     'characters', # Characters 애플리케이션 추가
+    'videos2',
 
     'django_prometheus', # Django Prometheus 추가
     'rest_framework', # Django REST framework 추가
