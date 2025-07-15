@@ -44,6 +44,8 @@ ALLOWED_HOSTS = [
     '.epi-log.site',          # 서브도메인 전체 허용 (예: grafana.epi-log.site)
 ]
 
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 # Django 로컬 개발 환경 포트
 BACKEND_DOMAIN = 'localhost:8000'
 
