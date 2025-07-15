@@ -58,7 +58,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.backend.rule=Host(`epi-log.site`, `www.epi-log.site`)"
-      # - "traefik.http.routers.backend.entrypoints=websecure"
+      - "traefik.http.routers.backend.entrypoints=websecure"
       - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
       - "traefik.http.services.backend.loadbalancer.server.port=8000"
 
