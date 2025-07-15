@@ -42,6 +42,8 @@ ALLOWED_HOSTS = [
     'epi-log.site',
     'www.epi-log.site',
     '.epi-log.site',          # 서브도메인 전체 허용 (예: grafana.epi-log.site)
+    '172.19.0.5',             # Docker 내부 네트워크 IP
+    'backend-django',         # Docker 컨테이너 이름
 ]
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
