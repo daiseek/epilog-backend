@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'books', # Books 애플리케이션 추가
     'characters', # Characters 애플리케이션 추가
     'videos2',
+    'voe3Video',
 
     'django_prometheus', # Django Prometheus 추가
     'rest_framework', # Django REST framework 추가
