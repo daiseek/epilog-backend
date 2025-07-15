@@ -47,14 +47,14 @@ services:
     networks:
       - backend-net
       - backend-traefik
-    develop:
-      watch:
-        - path: .
-          target: /backend
-          action: sync+restart
-        - path: ./requirements.txt
-          target: /backend/requirements.txt
-          action: rebuild
+    # develop:
+    #   watch:
+    #     - path: .
+    #       target: /backend
+    #       action: sync+restart
+    #     - path: ./requirements.txt
+    #       target: /backend/requirements.txt
+    #       action: rebuild
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.backend.rule=Host(`epi-log.site`)"
