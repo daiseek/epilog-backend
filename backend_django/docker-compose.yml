@@ -35,6 +35,7 @@ services:
     build: .
     volumes:
       - .:/backend
+      - ./gcp-key.json:/app/gcp-key.json # GCP veo 키 파일 마운트
     ports:
       - "28000:8000"
     depends_on:
@@ -44,6 +45,8 @@ services:
         condition: service_started
     env_file:
       - ./.env
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /app/gcp-key.json # voe key 컨테이너 내부 경로
     networks:
       - backend-net
       - backend-traefik

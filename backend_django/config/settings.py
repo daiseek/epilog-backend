@@ -53,15 +53,23 @@ BACKEND_DOMAIN = 'localhost:8000'
 # OpenAI API 키
 OPENAI_API_KEY = env('OPENAI_API_KEY')
 
+# Runway API 키
+RUNWAY_API_KEY = env('RUNWAY_API_KEY')
+
 # Application definition
 
 INSTALLED_APPS = [
     # API 개발시 생성한 애플리케이션 명시
     'books', # Books 애플리케이션 추가
     'characters', # Characters 애플리케이션 추가
+
+    'videos2',
+    'voe3Video',
+
     'users', # Users 애플리케이션 추가
 
     # 's3test', # S3 테스트용 앱
+
 
     'django_prometheus', # Django Prometheus 추가
     'rest_framework', # Django REST framework 추가
