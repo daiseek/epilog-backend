@@ -44,6 +44,7 @@ ALLOWED_HOSTS = [
     # 'epi-log.site',
     # 'www.epi-log.site',
     # '.epi-log.site',          # 서브도메인 전체 허용 (예: grafana.epi-log.site)
+
 ]
 
 

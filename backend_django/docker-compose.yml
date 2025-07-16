@@ -50,6 +50,7 @@ services:
       GOOGLE_APPLICATION_CREDENTIALS: /app/gcp-key.json # voe key 컨테이너 내부 경로
     networks:
       - backend-net
+
       # 🐕 개발용
       # - backend-traefik
     # 🐕 개발용
@@ -94,8 +95,10 @@ services:
       - "29090:9090"
     networks:
       - backend-net
+
       # ⭐️ 배포용
       # - backend-traefik
+
 
   # Grafana 모니터링 서비스 설정
   backend-grafana:
@@ -120,8 +123,10 @@ services:
 
     networks:
       - backend-net
+
       # ⭐️ 배포용
       # - backend-traefik
+
 
 # volume 설정
 volumes:
@@ -132,6 +137,7 @@ volumes:
 networks:
   backend-net:
     driver: bridge
+
   # ⭐️ 배포용
   # backend-traefik:
   #   external: true # Traefik 네트워크를 외부에서 관리하도록 설정,
