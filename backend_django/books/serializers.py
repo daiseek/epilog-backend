@@ -10,3 +10,8 @@ class BookCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         return Book.objects.create(**validated_data)
+
+''' PDF 파일로 입력시 book 생성후 직렬화하는 함수 '''
+class BookPdfUploadSerializer(serializers.Serializer):
+    title = serializers.CharField(max_length=255)
+    pdf = serializers.FileField()
