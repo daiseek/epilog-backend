@@ -104,30 +104,39 @@ class ScriptGenerateView(APIView):
         # 파싱 및 Redis 캐시 저장
         try:
             scene_texts = parse_scene_list(raw_text)
-            generated_scenes = [
-        {
-        "sceneId": scene.get("scene"),
-        "background": scene.get("background"),
-        "mood": scene.get("mood"),
-        "style": scene.get("style"),
-        "camera": scene.get("camera"),
-        "soundtrack": scene.get("soundtrack"),
-        "characters": scene.get("characters"),
-        "lines": scene.get("lines"),
-        "rewriting_prompt": scene.get("rewriting_prompt"),
-        "video_job_id": f"job-{uuid.uuid4()}"
-        }
-        for scene in scene_texts
-]
 
+            # ✅ script_id 생성
+            script_id = f"scpt-{uuid.uuid4().hex[:8]}"
 
-            cache_key = f"script:{character_id}"
+            # ✅ scene 구조 생성
+            generated_scenes = []
+            for scene in scene_texts:
+                scene_id = scene.get("scene")
+                generated_scenes.append({
+                    "sceneId": scene_id,
+                    "background": scene.get("background"),
+                    "mood": scene.get("mood"),
+                    "style": scene.get("style"),
+                    "camera": scene.get("camera"),
+                    "soundtrack": scene.get("soundtrack"),
+                    "characters": scene.get("characters"),
+                    "lines": scene.get("lines"),
+                    "rewriting_prompt": scene.get("rewriting_prompt"),  # 혹은 veo_prompt
+                    "rewriting_id": f"{script_id}-scene-{scene_id}"
+                })
+
+            # ✅ Redis에 script_id 기준으로 저장
+            cache_key = f"script:{script_id}"
             script_cache = caches['script_cache']
-            script_cache.set(cache_key, generated_scenes, timeout=600)
+            script_cache.set(cache_key, {
+                "characterId": character_id,
+                "scenes": generated_scenes
+            }, timeout=1000)
 
             return Response({
-            "characterId": character_id,
-            "scenes": generated_scenes  # 이제는 veo_prompt까지 포함된 전체 구조
+                "script_id": script_id,
+                "characterId": character_id,
+                "scenes": generated_scenes
             }, status=201)
 
         except Exception as e:
