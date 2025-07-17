@@ -6,7 +6,8 @@ from django.core.cache import caches
 from .gpt_client import (
     generate_scenes_with_gpt,
     generate_characters_with_gpt,
-    parse_scene_list  # parse_scene_list를 parse_character_list로 rename해도 됨
+    parse_scene_list,
+    parse_character_list
 )
 import uuid
 
@@ -43,7 +44,7 @@ class CharacterConditionalCreateOrListView(APIView):
         # GPT 호출로 캐릭터 생성
         try:
             raw_text = generate_characters_with_gpt(book.title, book.content)
-            character_data_list = parse_scene_list(raw_text)
+            character_data_list = parse_character_list(raw_text)
         except Exception as e:
             return Response({'error': f'GPT 호출 실패: {str(e)}'}, status=500)
 
@@ -103,31 +104,41 @@ class ScriptGenerateView(APIView):
 
         # 파싱 및 Redis 캐시 저장
         try:
-            scene_texts = parse_scene_list(raw_text)
-            generated_scenes = [
-        {
-        "sceneId": scene.get("scene"),
-        "background": scene.get("background"),
-        "mood": scene.get("mood"),
-        "style": scene.get("style"),
-        "camera": scene.get("camera"),
-        "soundtrack": scene.get("soundtrack"),
-        "characters": scene.get("characters"),
-        "lines": scene.get("lines"),
-        "rewriting_prompt": scene.get("rewriting_prompt"),
-        "video_job_id": f"job-{uuid.uuid4()}"
-        }
-        for scene in scene_texts
-]
+            parsed_result = parse_scene_list(raw_text)
+            
+            # parse_scene_list는 이제 {script_id: "...", scenes: [...]} 형태로 반환
+            script_id = parsed_result.get("script_id")
+            scene_texts = parsed_result.get("scenes", [])
 
+            # ✅ scene 구조 생성
+            generated_scenes = []
+            for scene in scene_texts:
+                scene_id = scene.get("sceneId")  # "scene" → "sceneId"로 수정
+                generated_scenes.append({
+                    "sceneId": scene_id,
+                    "background": scene.get("background"),
+                    "mood": scene.get("mood"),
+                    "style": scene.get("style"),
+                    "camera": scene.get("camera"),
+                    "soundtrack": scene.get("soundtrack"),
+                    "characters": scene.get("characters"),
+                    "lines": scene.get("lines"),
+                    "rewriting_prompt": scene.get("rewriting_prompt"),
+                    "rewriting_id": scene.get("rewriting_id")  # 이미 파싱 함수에서 생성됨
+                })
 
-            cache_key = f"script:{character_id}"
+            # ✅ Redis에 script_id 기준으로 저장
+            cache_key = f"script:{script_id}"
             script_cache = caches['script_cache']
-            script_cache.set(cache_key, generated_scenes, timeout=600)
+            script_cache.set(cache_key, {
+                "characterId": character_id,
+                "scenes": generated_scenes
+            }, timeout=1000)
 
             return Response({
-            "characterId": character_id,
-            "scenes": generated_scenes  # 이제는 veo_prompt까지 포함된 전체 구조
+                "script_id": script_id,
+                "characterId": character_id,
+                "scenes": generated_scenes
             }, status=201)
 
         except Exception as e:
