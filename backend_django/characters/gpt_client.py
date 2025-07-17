@@ -47,8 +47,9 @@ Description: {description}
 Instructions:
 
 - Generate {scene_count} scenes.
-- Each scene should be approximately 8 seconds long and include rich, compressed visual descriptions suitable for video generation.
-- Output should be a JSON array with the following fields:
+- All scenes must share a **consistent visual style** (e.g., anime-style, cinematic, painterly).
+- GPT must choose **one style only**, and apply it consistently to all scenes.
+- Each scene should be approximately 8 seconds long and include...
 
   - scene: scene number
   - background: visual description of location and time (in English)
