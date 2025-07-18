@@ -70,6 +70,7 @@ Scene format:
 - Only one character should speak per scene.
 - The Korean dialogue (line_ko) must be short enough to be spoken in 3–4 seconds (about 10–15 characters).
 - Use natural, simple expressions. Avoid long or complex sentences.
+- Make a colloquial line that sounds like it was spoken by a real person.
 
   - rewriting_prompt: a single, richly detailed English sentence (between 400 and 500 characters).
   - It must describe:
