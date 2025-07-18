@@ -10,7 +10,7 @@ def generate_narration_for_character(character_id: int, lines: List[Dict[str, An
     """
     영상 생성에서 호출할 수 있는 나레이션 생성 함수
     
-    Args:
+    Args: 넣어야할 매개변수
         character_id (int): 캐릭터 ID
         lines (List[Dict]): 대사 리스트
             예시: [
@@ -18,7 +18,7 @@ def generate_narration_for_character(character_id: int, lines: List[Dict[str, An
                 {"sceneId": 2, "speaker": "점순이", "text": "반갑습니다"}
             ]
     
-    Returns:
+    Returns: 반환값 -> audioUrl에서 나레이션을 가져와서 영상 합성에 사용
         List[Dict]: 나레이션 결과 리스트
             예시: [
                 {
