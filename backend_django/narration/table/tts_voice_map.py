@@ -3,12 +3,12 @@
 # 서버가 이 테이블을 사용해 voice id 선택
 VOICE_SELECTION_TABLE = {
     # 여성
-    ("여성", "teen"): "21m00Tcm4TlvDq8ikWAM",      # Bella
-    ("여성", "adult"): "EXAVITQu4vr4xnSDxMaL",     # Rachel
-    ("여성", "senior"): "EXAVITQu4vr4xnSDxMaL",    # Rachel (대체용)
+    ("여성", "teen"): "ZJCNdZEjYwkOElxugmW2",      # Bella
+    ("여성", "adult"): "ZJCNdZEjYwkOElxugmW2",     # Rachel
+    ("여성", "senior"): "ZJCNdZEjYwkOElxugmW2",    # Rachel (대체용)
 
     # 남성
-    ("남성", "teen"): "AZnzlk1XvdvUeBnXmlld",      # Domi (중성 느낌)
-    ("남성", "adult"): "2EiwWnXFnvU5JabPnv8n",     # Clyde
-    ("남성", "senior"): "VR6AewLTigWG4xSOukaG",    # Arnold
+    ("남성", "teen"): "ZJCNdZEjYwkOElxugmW2",      # Domi (중성 느낌)
+    ("남성", "adult"): "ZJCNdZEjYwkOElxugmW2",     # Clyde
+    ("남성", "senior"): "ZJCNdZEjYwkOElxugmW2",    # Arnold
 }
