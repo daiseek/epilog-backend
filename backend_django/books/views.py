@@ -6,9 +6,9 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from books.pdf_utils import extract_text_from_pdf # pdf 파일에서 텍스트를 추출하는 함수
 from books.gpt_client import summarize_with_gpt # GPT를 이용한 pdf 책 요약 함수
 from books.s3_client import upload_to_s3 # S3에 파일을 업로드하는 함수
-from .serializers import BookCreateSerializer, BookPdfUploadSerializer, BookOfficialResponseSerializer
+from .serializers import BookCreateSerializer, BookPdfUploadSerializer, BookOfficialResponseSerializer, BookVideoResponseSerializer
 from .models import Book
-
+from voe3Video.models import Video
 # Create your views here.
 
 # 책 입력 API 2가지를 정의함
@@ -94,3 +94,35 @@ class BookOfficialView(APIView):
         # 3. 성공 응답 반환
         return Response(response_serializer.data, status=status.HTTP_200_OK)
 
+class BookVideosView(APIView):
+    def get(self, request, book_id):
+        query_book_id = request.GET.get('bookId')
+
+        if str(book_id) != str(query_book_id):
+            return Response({
+                "status": "error",
+                "error_code": 400,
+                "message": "bookId가 일치하지 않습니다."
+            }, status=400)
+        
+        try:
+            # 1. 책 존재 여부 확인
+            book = Book.objects.get(id=book_id, is_deleted=False)
+            
+            # 2. 해당 책의 캐릭터들 조회
+            characters = book.characters.filter(is_deleted=False)
+
+            # 3. 캐릭터들의 비디오들 조회 (모델 관계에 따라)
+            videos = Video.objects.filter(character__in=characters)
+
+            # 4. 응답 데이터 직렬화
+            serializer = BookVideoResponseSerializer(videos, many = True)
+            return Response(serializer.data, status=200)
+        
+        except Book.DoesNotExist:
+            return Response({
+                "status": "error",
+                "error_code": 404,
+                "message": "책을 찾을 수 없습니다."
+            }, status=404)
+            

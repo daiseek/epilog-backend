@@ -28,6 +28,10 @@ class Video(models.Model):
     # is_bookmarked: 북마크 여부 (0: 북마크 안 함, 1: 북마크)
     is_bookmarked = models.BooleanField(default=False, verbose_name="Is Bookmarked")
 
+    character = models.ForeignKey('characters.Character', on_delete=models.CASCADE, related_name='videos', null=True, blank=True)
+
+    thumbnail_url = models.URLField(null=True, blank=True)  # thumnail_url
+
     # Meta 클래스: 모델의 메타데이터 옵션을 정의합니다.
     class Meta:
         # 사실 여기는 관리자페이지 아니면 있어야 하는 메소드는 아닐거같긴 합니다 .

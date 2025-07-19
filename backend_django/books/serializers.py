@@ -37,3 +37,9 @@ class BookOfficialResponseSerializer(serializers.Serializer):
     def get_pdf_url(self, obj):
         # 현재 DB에 pdf_url 컬럼이 없으므로 임시 URL 반환
         return f"https://cdn.example.com/books/{obj.id}.pdf"
+
+class BookVideoResponseSerializer(serializers.Serializer):
+    video_id=serializers.IntegerField(source='id')
+    character_id=serializers.IntegerField(source='character.id')
+    video_url = serializers.URLField(source='video_uri') # voe3Video 필드명
+    thumbnail_url = serializers.URLField()
