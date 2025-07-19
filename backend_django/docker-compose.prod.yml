@@ -172,6 +172,8 @@ services:
     ports:
       - 23100:3100
     command: -config.file=/etc/loki/local-config.yaml #기본 설정
+    labels:
+      - "traefik.enable=false" # Traefik에서 제외 (내부 서비스)
     networks:
       - backend-net
 
@@ -185,6 +187,8 @@ services:
     command:
       - -config.file=/etc/promtail/docker-config.yaml #설정파일
       # - -config.expand-env=true #환경변수 수집용. 안해도 됩니다.
+    labels:
+      - "traefik.enable=false" # Traefik에서 제외 (외부 접근 불필요)
     depends_on:
       - backend-loki
     networks:
