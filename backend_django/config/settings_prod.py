@@ -47,6 +47,7 @@ BACKEND_DOMAIN = 'epi-log.site'
 
 # 배포용/(근데 실제로 사용은 안했음.)
 SECURE_SSL_REDIRECT = True
+SECURE_REDIRECT_EXEMPT = [r'^metrics/?$']  # /metrics 경로는 HTTPS 리다이렉트 제외
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 
