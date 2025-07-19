@@ -8,6 +8,8 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
+
+개발용 환경 설정 파일
 """
 
 from pathlib import Path
@@ -39,10 +41,10 @@ SECRET_KEY = env('DJANGO_SECRET_KEY') # django 시크릿키는 env에서 관리
 ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
-    '34.22.81.8', # GCP VM IP
+    # '34.22.81.8', # GCP VM IP
     'backend-django', # Docker 컨테이너 이름
-    'epi-log.site', # 도메인
-    'www.epi-log.site', # www 서브도메인
+    # 'epi-log.site', # 도메인
+    # 'www.epi-log.site', # www 서브도메인
     # '13.209.163.154',         # EC2 퍼블릭 IP
     # 'epi-log.site',
     # 'www.epi-log.site',
@@ -51,31 +53,8 @@ ALLOWED_HOSTS = [
 ]
 
 
-# ⭐️ 배포용
-# ALLOWED_HOSTS = [
-#     'localhost',
-#     '127.0.0.1',
-#     '13.209.163.154',         # EC2 퍼블릭 IP
-#     'epi-log.site',
-#     'www.epi-log.site',
-#     '.epi-log.site',          # 서브도메인 전체 허용 (예: grafana.epi-log.site)
-#     '172.19.0.5',             # Docker 내부 네트워크 IP
-#     'backend-django',         # Docker 컨테이너 이름
-# ]
-
-# ⭐️ 배포용
-# SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-
 # Django 로컬 개발 환경 포트
 BACKEND_DOMAIN = 'localhost:8000'
-
-# 배포 서버
-# BACKEND_DOMAIN = 'epi-log.site'
-
-# 배포용/(근데 실제로 사용은 안했음.)
-# SECURE_SSL_REDIRECT = True
-# SESSION_COOKIE_SECURE = True
-# CSRF_COOKIE_SECURE = True
 
 
 # OpenAI API 키
