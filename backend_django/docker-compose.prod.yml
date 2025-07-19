@@ -33,6 +33,7 @@ services:
     image: backend-django
     container_name: backend-django
     build: .
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 # Gunicorn을 사용하여 Django 애플리케이션 실행
     volumes:
       - .:/backend
       - ./gcp-key.json:/app/gcp-key.json # GCP veo 키 파일 마운트
@@ -45,36 +46,27 @@ services:
       backend-redis:
         condition: service_started
     env_file:
-      - ./.env
+      - ./.env.prod
     environment:
-      GOOGLE_APPLICATION_CREDENTIALS: /app/gcp-key.json # voe key 컨테이너 내부 경로
+      DJANGO_ENV: prod # 배포 환경 설정
+      GOOGLE_APPLICATION_CREDENTIALS: /app/gcp-key.json # veo3 key 컨테이너 내부 경로
     networks:
       - backend-net
-
-      # 🐕 개발용
-      # - backend-traefik
-    # 🐕 개발용
-    # develop:
-    #   watch:
-    #     - path: .
-    #       target: /backend
-    #       action: sync+restart
-    #     - path: ./requirements.txt
-    #       target: /backend/requirements.txt
-    #       action: rebuild
+      # ⭐️ 배포용
+      - backend-traefik
 
     # ⭐️ 배포용
-    # labels:
-    #   - "traefik.enable=true"
-    #   # HTTPS 라우터 설정 (Traefik에서 자동으로 HTTP를 HTTPS로 리다이렉트)
-    #   - "traefik.http.routers.backend-django.rule=Host(`epi-log.site`, `www.epi-log.site`)"
-    #   - "traefik.http.routers.backend-django.entrypoints=websecure"
-    #   - "traefik.http.routers.backend-django.tls=true"
-    #   - "traefik.http.routers.backend-django.tls.certresolver=letsencrypt"
-    #   - "traefik.http.routers.backend-django.service=backend-django-service"
+    labels:
+      - "traefik.enable=true"
+      # HTTPS 라우터 설정 (Traefik에서 자동으로 HTTP를 HTTPS로 리다이렉트)
+      - "traefik.http.routers.backend-django.rule=Host(`epi-log.site`, `www.epi-log.site`)"
+      - "traefik.http.routers.backend-django.entrypoints=websecure"
+      - "traefik.http.routers.backend-django.tls=true"
+      - "traefik.http.routers.backend-django.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.backend-django.service=backend-django-service"
 
-    #   # 서비스 포트 설정 - 중요!
-    #   - "traefik.http.services.backend-django-service.loadbalancer.server.port=8000"
+      # 서비스 포트 설정 - 중요!
+      - "traefik.http.services.backend-django-service.loadbalancer.server.port=8000"
 
   # Prometheus 모니터링 서비스 설정
   backend-prometheus:
@@ -84,12 +76,12 @@ services:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
-    # labels:
-    #   - "traefik.enable=true"
-    #   - "traefik.http.routers.prom.rule=Host(`prometheus.epi-log.site`)"
-    #   - "traefik.http.routers.prom.entrypoints=websecure"
-    #   - "traefik.http.routers.prom.tls.certresolver=letsencrypt"
-    #   - "traefik.http.services.prom.loadbalancer.server.port=9090"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prom.rule=Host(`prometheus.epi-log.site`)"
+      - "traefik.http.routers.prom.entrypoints=websecure"
+      - "traefik.http.routers.prom.tls.certresolver=letsencrypt"
+      - "traefik.http.services.prom.loadbalancer.server.port=9090"
 
     ports:
       - "29090:9090"
@@ -97,8 +89,7 @@ services:
       - backend-net
 
       # ⭐️ 배포용
-      # - backend-traefik
-
+      - backend-traefik
 
   # Grafana 모니터링 서비스 설정
   backend-grafana:
@@ -114,19 +105,18 @@ services:
       - grafana_data:/var/lib/grafana # Grafana 데이터 (대시보드 등)
     ports:
       - "23000:3000" # Grafana는 기본적으로 3000번 포트입니다
-    # labels:
-    #   - traefik.enable=true
-    #   - traefik.http.services.grafana.loadbalancer.server.port=3000
-    #   - traefik.http.routers.grafana.entrypoints=websecure
-    #   - traefik.http.routers.grafana.tls.certresolver=letsencrypt
-    #   - traefik.http.routers.grafana.rule=Host(`grafana.epi-log.site`)
+    labels:
+      - traefik.enable=true
+      - traefik.http.services.grafana.loadbalancer.server.port=3000
+      - traefik.http.routers.grafana.entrypoints=websecure
+      - traefik.http.routers.grafana.tls.certresolver=letsencrypt
+      - traefik.http.routers.grafana.rule=Host(`grafana.epi-log.site`)
 
     networks:
       - backend-net
 
       # ⭐️ 배포용
-      # - backend-traefik
-
+      - backend-traefik
 
 # volume 설정
 volumes:
@@ -139,5 +129,5 @@ networks:
     driver: bridge
 
   # ⭐️ 배포용
-  # backend-traefik:
-  #   external: true # Traefik 네트워크를 외부에서 관리하도록 설정,
+  backend-traefik:
+    external: true # Traefik 네트워크를 외부에서 관리하도록 설정,
