@@ -21,3 +21,9 @@ scrape_configs:
     scheme: http #cAdvisor는 HTTP로 실행됨
     static_configs:
       - targets: ["backend-cadvisor:8080"] #cAdvisor 서비스 이름과 포트
+
+  - job_name: "backend-node-data" #호스트 시스템 메트릭 수집
+    metrics_path: "/metrics" #Node Exporter 메트릭 경로
+    scheme: http #Node Exporter는 HTTP로 실행됨
+    static_configs:
+      - targets: ["backend-node_exporter:9100"] #Node Exporter 서비스 이름과 포트

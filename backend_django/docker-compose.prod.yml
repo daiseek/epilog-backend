@@ -190,7 +190,7 @@ services:
       - backend-net
 
   backend-cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.47.0
+    image: gcr.io/cadvisor/cadvisor:latest
     container_name: backend-cadvisor
     privileged: true
     devices:
@@ -216,6 +216,19 @@ services:
       - "logging_jobname=cadvisor"
     networks:
       - backend-net
+
+  backend-node_exporter: #서비스 이름
+    image: quay.io/prometheus/node-exporter:v1.8.1 #이미지
+    container_name: node_exporter
+    ports:
+      - "29100:9100" #포트 9100 매핑
+    command:
+      - "--path.rootfs=/host" #루트 파일 시스템을 볼륨에 설정한 host/로 설정
+    restart: unless-stopped #멈추면 다시 시작
+    volumes:
+      - "/:/host:ro,rslave" #읽기 전용 호스트 머신 데이터 (마운트 정보 포함 - rslave)
+    networks:
+      - backend-net #같은 네트워크
 
 # volume 설정
 volumes:
