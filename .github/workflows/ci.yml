@@ -47,7 +47,7 @@ jobs:
 
       - name: Run Django tests
         env:
-          SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+          DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
           DATABASE_URL: mysql://root:${{ secrets.MYSQL_ROOT_PASSWORD }}@127.0.0.1:3306/${{ secrets.MYSQL_DATABASE }}
           DEBUG: "False"
         run: |
