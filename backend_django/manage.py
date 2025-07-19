@@ -6,7 +6,14 @@ import sys
 
 def main():
     """Run administrative tasks."""
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+    # 환경변수에 따라 설정 파일 선택
+    env = os.environ.get('DJANGO_ENV', 'dev')  # 기본값은 dev
+    
+    if env == 'prod':
+        os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings_prod')
+    else:
+        os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings_dev')
+    
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:
