@@ -13,3 +13,8 @@ scrape_configs:
     metrics_path: "/metrics" #장고 애플리케이션 메트릭 경로
     static_configs:
       - targets: ["backend-django:8000"] #장고 애플리케이션 서비스 이름과 포트
+
+  - job_name: "backend-cadvisor" #컨테이너 리소스 모니터링
+    metrics_path: "/metrics" #cAdvisor 메트릭 경로
+    static_configs:
+      - targets: ["backend-cadvisor:8080"] #cAdvisor 서비스 이름과 포트
