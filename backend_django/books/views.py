@@ -96,15 +96,6 @@ class BookOfficialView(APIView):
 
 class BookVideosView(APIView):
     def get(self, request, book_id):
-        query_book_id = request.GET.get('bookId')
-
-        if str(book_id) != str(query_book_id):
-            return Response({
-                "status": "error",
-                "error_code": 400,
-                "message": "bookId가 일치하지 않습니다."
-            }, status=400)
-        
         try:
             # 1. 책 존재 여부 확인
             book = Book.objects.get(id=book_id, is_deleted=False)
@@ -112,17 +103,23 @@ class BookVideosView(APIView):
             # 2. 해당 책의 캐릭터들 조회
             characters = book.characters.filter(is_deleted=False)
 
-            # 3. 캐릭터들의 비디오들 조회 (모델 관계에 따라)
+            # 3. 캐릭터들의 비디오들 조회
             videos = Video.objects.filter(character__in=characters)
 
             # 4. 응답 데이터 직렬화
-            serializer = BookVideoResponseSerializer(videos, many = True)
+            serializer = BookVideoResponseSerializer(videos, many=True)
             return Response(serializer.data, status=200)
-        
+            
         except Book.DoesNotExist:
             return Response({
                 "status": "error",
                 "error_code": 404,
                 "message": "책을 찾을 수 없습니다."
             }, status=404)
+        except Exception as e:
+            return Response({
+                "status": "error",
+                "error_code": 500,
+                "message": "서버 내부 오류가 발생했습니다."
+            }, status=500)
             
