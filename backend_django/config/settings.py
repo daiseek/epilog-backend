@@ -41,6 +41,8 @@ ALLOWED_HOSTS = [
     '127.0.0.1',
     '34.22.81.8', # GCP VM IP
     'backend-django', # Docker 컨테이너 이름
+    'epi-log.site', # 도메인
+    'www.epi-log.site', # www 서브도메인
     # '13.209.163.154',         # EC2 퍼블릭 IP
     # 'epi-log.site',
     # 'www.epi-log.site',
