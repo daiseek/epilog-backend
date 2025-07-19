@@ -26,4 +26,4 @@ scrape_configs:
     metrics_path: "/metrics" #Node Exporter 메트릭 경로
     scheme: http #Node Exporter는 HTTP로 실행됨
     static_configs:
-      - targets: ["node_exporter:9100"] #Node Exporter 서비스 이름과 포트
+      - targets: ["backend-node_exporter:9100"] #Node Exporter 서비스 이름과 포트
