@@ -219,7 +219,7 @@ services:
 
   backend-node_exporter: #서비스 이름
     image: quay.io/prometheus/node-exporter:v1.8.1 #이미지
-    container_name: node_exporter
+    container_name: backend-node_exporter
     ports:
       - "29100:9100" #포트 9100 매핑
     command:
