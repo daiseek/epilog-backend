@@ -66,6 +66,10 @@ services:
       # 서비스 포트 설정 - 중요!
       - "traefik.http.services.backend-django-service.loadbalancer.server.port=8000"
 
+      # Loki 로그 수집 설정
+      - "logging=promtail"
+      - "logging_jobname=django-backend"
+
   # Prometheus 모니터링 서비스 설정
   backend-prometheus:
     image: prom/prometheus:v2.45.6
@@ -75,12 +79,9 @@ services:
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.prom.rule=Host(`prometheus.epi-log.site`)"
-      - "traefik.http.routers.prom.entrypoints=websecure"
-      - "traefik.http.routers.prom.tls=true"
-      - "traefik.http.routers.prom.tls.certresolver=letsencrypt"
-      - "traefik.http.services.prom.loadbalancer.server.port=9090"
+      - "traefik.enable=false" # 외부 접근 차단 (내부 전용)
+      - "logging=promtail"
+      - "logging_jobname=containerlogs"
 
     ports:
       - "29090:9090"
@@ -109,6 +110,10 @@ services:
       - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
 
+      # Loki 로그 수집 설정
+      - "logging=promtail"
+      - "logging_jobname=grafana"
+
     networks:
       - backend-net
 
@@ -133,14 +138,104 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - traefik-certificates:/letsencrypt # 중요
+    labels:
+      # Loki 로그 수집 설정
+      - "logging=promtail"
+      - "logging_jobname=traefik"
     networks:
       - backend-net
+
+  backend-portainer:
+    image: portainer/portainer-ce:latest
+    ports:
+      - "29000:9000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.portainer.rule=Host(`portainer.epi-log.site`)"
+      - "traefik.http.routers.portainer.entrypoints=websecure"
+      - "traefik.http.routers.portainer.tls=true"
+      - "traefik.http.routers.portainer.tls.certresolver=letsencrypt"
+      - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+    networks:
+      - backend-net
+
+  backend-loki:
+    image: grafana/loki:latest
+    ports:
+      - 23100:3100
+    command: -config.file=/etc/loki/local-config.yaml #기본 설정
+    labels:
+      - "traefik.enable=false" # Traefik에서 제외 (내부 서비스)
+    networks:
+      - backend-net
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    volumes:
+      - ./promtail/config.yml:/etc/promtail/docker-config.yaml
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro #도커 로그
+      - /var/run/docker.sock:/var/run/docker.sock #도커 소켓 (디몬)
+    command:
+      - -config.file=/etc/promtail/docker-config.yaml #설정파일
+      # - -config.expand-env=true #환경변수 수집용. 안해도 됩니다.
+    labels:
+      - "traefik.enable=false" # Traefik에서 제외 (외부 접근 불필요)
+    depends_on:
+      - backend-loki
+    networks:
+      - backend-net
+
+  backend-cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: backend-cadvisor
+    privileged: true
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "28080:8080"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.cadvisor.rule=Host(`cadvisor.epi-log.site`)"
+      - "traefik.http.routers.cadvisor.entrypoints=websecure"
+      - "traefik.http.routers.cadvisor.tls=true"
+      - "traefik.http.routers.cadvisor.tls.certresolver=letsencrypt"
+      - "traefik.http.services.cadvisor.loadbalancer.server.port=8080"
+
+      # Loki 로그 수집 설정
+      - "logging=promtail"
+      - "logging_jobname=cadvisor"
+    networks:
+      - backend-net
+
+  backend-node_exporter: #서비스 이름
+    image: quay.io/prometheus/node-exporter:v1.8.1 #이미지
+    container_name: backend-node_exporter
+    ports:
+      - "29100:9100" #포트 9100 매핑
+    command:
+      - "--path.rootfs=/host" #루트 파일 시스템을 볼륨에 설정한 host/로 설정
+    restart: unless-stopped #멈추면 다시 시작
+    volumes:
+      - "/:/host:ro,rslave" #읽기 전용 호스트 머신 데이터 (마운트 정보 포함 - rslave)
+    networks:
+      - backend-net #같은 네트워크
 
 # volume 설정
 volumes:
   mysql_data:
   grafana_data:
   traefik-certificates: # 중요 - Traefik 인증서 저장소
+  portainer_data:
 
 # 컨테이너 네트워크 설정
 networks:

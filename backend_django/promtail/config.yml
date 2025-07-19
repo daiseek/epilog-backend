@@ -1,0 +1,38 @@
+# https://grafana.com/docs/loki/latest/clients/promtail/configuration/
+# https://docs.docker.com/engine/api/v1.41/#operation/ContainerList
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml #포지션 파일
+
+clients:
+  - url: http://backend-loki:3100/loki/api/v1/push #로키 api 위치. 여기로 로그를 보냅니다
+
+scrape_configs:
+  - job_name: docker_containers
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock # 도커 설정
+        refresh_interval: 5s
+        filters:
+          - name: label
+            values: ["logging=promtail"] #컴포즈에 logging=promtail 라벨 있는 곳만 로그 수집
+    relabel_configs:
+      - source_labels: ["__meta_docker_container_name"] #컨테이너 이름
+        regex: "/(.*)"
+        target_label: "container"
+      - source_labels: ["__meta_docker_container_log_stream"] #로그 스트림 (stdout/stderr)
+        target_label: "logstream"
+      - source_labels: ["__meta_docker_container_label_logging_jobname"] #서비스별 작업 이름
+        target_label: "job"
+      - source_labels: [
+            "__meta_docker_container_label_com_docker_compose_service",
+          ] #docker-compose 서비스 이름
+        target_label: "compose_service"
+      - source_labels: [
+            "__meta_docker_container_label_com_docker_compose_project",
+          ] #docker-compose 프로젝트 이름
+        target_label: "compose_project"
+      - source_labels: ["__meta_docker_network_ip"] #컨테이너 IP
+        target_label: "container_ip"
