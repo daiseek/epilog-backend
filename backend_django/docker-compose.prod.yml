@@ -33,7 +33,7 @@ services:
     image: backend-django
     container_name: backend-django
     build: .
-    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 # Gunicorn을 사용하여 Django 애플리케이션 실행
+    command: python -m gunicorn config.wsgi:application --bind 0.0.0.0:8000 # Gunicorn을 사용하여 Django 애플리케이션 실행
     volumes:
       - .:/backend
       - ./gcp-key.json:/app/gcp-key.json # GCP veo 키 파일 마운트
