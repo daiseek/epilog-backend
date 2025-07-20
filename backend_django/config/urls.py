@@ -25,9 +25,7 @@ urlpatterns = [
 
     path('books/', include('books.urls')),  # Books 애플리케이션의 URL 포함
 
-    path('videos/', include('videos.urls')),  # Videos 애플리케이션의 URL 포함
-    path('videos2/', include('videos2.urls')),
-    path('voe3Video/', include('voe3Video.urls')),
+    path('veo3Video/', include('veo3Video.urls')),
 
     path('characters/', include('characters.urls')),  # Characters 애플리케이션의 URL 포함
     path('users/', include('users.urls')),  # Users 애플리케이션의 URL 포함

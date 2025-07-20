@@ -9,9 +9,10 @@ import traceback
 from datetime import datetime, timedelta, timezone
 import uuid
 
-from voe3Video.models import Video # Django Video 모델 임포트: 비디오 메타데이터를 DB에 저장하기 위함
+from veo3Video.models import Video # Django Video 모델 임포트: 비디오 메타데이터를 DB에 저장하기 위함
+from characters.models import Character
 
-# .env 파일에서 환경 변수를 로드
+# .env.dev 파일에서 환경 변수를 로드
 # 이 파일은 Google Cloud 프로젝트 ID, 위치, GCS 버킷 정보 등 포함.
 load_dotenv()
 
@@ -70,7 +71,7 @@ def generate_signed_url(gcs_uri: str, expiration_seconds: int = 3600):
 
 # 텍스트를 기반으로 비디오를 생성하는 함수
 # Google Cloud Vertex AI의 Veo 3 API를 호출하여 비디오를 생성, 생성된 비디오의 메타데이터를 데이터베이스에 저장.
-def generate_video_from_text(prompt: str, title: str, user_id: str = None):
+def generate_video_from_text(prompt: str, title: str, character_id: int = None, user_id: str = None):
     """
     텍스트 프롬프트를 사용하여 Veo 3 API로 비디오를 생성.
 
@@ -78,6 +79,7 @@ def generate_video_from_text(prompt: str, title: str, user_id: str = None):
         prompt (str): 비디오 생성에 사용될 텍스트 프롬프트.
         title (str): 생성될 비디오의 제목.
         user_id (str, optional): 비디오를 생성하는 사용자의 ID. JWT 인증 시 사용됩니다. 기본값은 None.
+        character_id (int, optional): 비디오와 연결될 캐릭터의 ID. 기본값은 None.
 
     Returns:
         dict: 생성된 비디오의 URI, 서명된 URL, 상태를 포함하는 딕셔너리.
@@ -149,7 +151,8 @@ def generate_video_from_text(prompt: str, title: str, user_id: str = None):
                 video_uri=final_video_uri,
                 prompt=prompt,
                 title=title,
-                user_id=user_id
+                user_id=user_id,
+                character_id=character_id
             )
 
             return {"video_uri": final_video_uri, "signed_url": signed_url, "status": "done"}

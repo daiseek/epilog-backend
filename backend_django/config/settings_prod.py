@@ -24,9 +24,9 @@ env = environ.Env(
     DEBUG=(bool, False)
 )
 
-# reading .env file
+# reading .env.dev file
 environ.Env.read_env(
-    env_file=os.path.join(BASE_DIR, '.env')
+    env_file=os.path.join(BASE_DIR, '.env.dev')
 )
 
 # False if not in os.environ because of casting above
@@ -70,7 +70,7 @@ INSTALLED_APPS = [
     'characters', # Characters 애플리케이션 추가
 
     'videos2',
-    'voe3Video',
+    'veo3Video',
 
     'users', # Users 애플리케이션 추가
 

@@ -26,9 +26,9 @@ env = environ.Env(
     DEBUG=(bool, False)
 )
 
-# reading .env file
+# reading .env.dev file
 environ.Env.read_env(
-    env_file=os.path.join(BASE_DIR, '.env')
+    env_file=os.path.join(BASE_DIR, '.env.dev')
 )
 
 # False if not in os.environ because of casting above
@@ -74,8 +74,7 @@ INSTALLED_APPS = [
     'books', # Books 애플리케이션 추가
     'characters', # Characters 애플리케이션 추가
 
-    'videos2',
-    'voe3Video',
+    'veo3Video',
 
     'users', # Users 애플리케이션 추가
 
@@ -231,3 +230,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # 이 부분을 꼭 추가해야 함
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# Celery 설정
+CELERY_BROKER_URL = env('CELERY_BROKER_URL', default='amqp://admin:1234@backend-rabbitmq:5672//')
+CELERY_RESULT_BACKEND = f'redis://{env("REDIS_HOST", default="backend-redis")}:{env("REDIS_PORT", default="6379")}/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'Asia/Seoul'

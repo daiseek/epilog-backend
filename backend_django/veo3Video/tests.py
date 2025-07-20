@@ -58,9 +58,9 @@ class VideoAPITest(TestCase):
     # 목적: 유효한 데이터로 비디오 생성 API를 호출했을 때, 성공적으로 비디오가 생성되고 데이터베이스에 저장되며, 올바른 응답을 반환하는지 확인합니다.
     # @patch 데코레이터를 사용하여 veo_service.py의 외부 API 호출 함수들을 모킹합니다.
     # 이렇게 하면 실제 Google Cloud API 호출 없이 테스트를 빠르게 실행하고 비용을 절감할 수 있습니다.
-    @patch('voe3Video.veo_service.storage.Client')
-    @patch('voe3Video.veo_service.client.models.generate_videos')
-    @patch('voe3Video.veo_service.generate_signed_url')
+    @patch('veo3Video.veo_service.storage.Client')
+    @patch('veo3Video.veo_service.client.models.generate_videos')
+    @patch('veo3Video.veo_service.generate_signed_url')
     def test_generate_video_api_success(self, mock_generate_signed_url, mock_generate_videos, mock_storage_client):
         # 1. GCS 클라이언트 및 관련 객체들을 모킹합니다.
         mock_bucket = MagicMock()
@@ -106,7 +106,7 @@ class VideoAPITest(TestCase):
     # 테스트 케이스: 비디오 생성 API 필수 필드 누락 시나리오
     # 목적: 필수 필드(prompt, title) 중 하나라도 누락되었을 때, API가 400 Bad Request를 반환하고
     #      비디오 생성 로직이 호출되지 않는지 확인합니다.
-    @patch('voe3Video.veo_service.client.models.generate_videos')
+    @patch('veo3Video.veo_service.client.models.generate_videos')
     def test_generate_video_api_missing_fields(self, mock_generate_videos):
         # 수행 작업:
         # 1. 필수 필드(title)가 누락된 데이터를 준비합니다.
@@ -145,7 +145,7 @@ class VideoAPITest(TestCase):
 
         # 2. `generate_signed_url` 함수를 모킹하여 실제 GCS 호출을 방지하고 가짜 URL을 반환하도록 설정합니다.
         #    `side_effect`를 사용하여 `generate_signed_url`이 호출될 때마다 동적으로 가짜 URL을 생성합니다.
-        with patch('voe3Video.veo_service.generate_signed_url') as mock_generate_signed_url:
+        with patch('veo3Video.veo_service.generate_signed_url') as mock_generate_signed_url:
             # 람다 함수는 `generate_signed_url`이 받는 인자(uri)를 받아 가짜 서명된 URL을 생성합니다.
             mock_generate_signed_url.side_effect = lambda uri: f"http://mock_signed_url_for_{uri.split('/')[-1]}"
             # 3. 비디오 목록 조회 API에 GET 요청을 보냅니다.
@@ -247,7 +247,7 @@ class VideoAPITest(TestCase):
         )
 
         # 2. `generate_signed_url` 함수를 모킹하여 실제 GCS 호출 방지
-        with patch('voe3Video.veo_service.generate_signed_url') as mock_generate_signed_url:
+        with patch('veo3Video.veo_service.generate_signed_url') as mock_generate_signed_url:
             mock_generate_signed_url.side_effect = lambda uri: f"http://mock_signed_url_for_{uri.split('/')[-1]}"
             # 3. 북마크된 비디오 목록 조회 API 호출
             response = self.client.get(self.list_bookmarked_url)
@@ -273,7 +273,7 @@ class VideoAPITest(TestCase):
             is_bookmarked=False
         )
 
-        with patch('voe3Video.veo_service.generate_signed_url') as mock_generate_signed_url:
+        with patch('veo3Video.veo_service.generate_signed_url') as mock_generate_signed_url:
             mock_generate_signed_url.return_value = "http://mock_signed_url"
             response = self.client.get(self.list_bookmarked_url)
 

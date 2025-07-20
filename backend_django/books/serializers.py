@@ -41,5 +41,5 @@ class BookOfficialResponseSerializer(serializers.Serializer):
 class BookVideoResponseSerializer(serializers.Serializer):
     video_id=serializers.IntegerField(source='id')
     character_id=serializers.IntegerField(source='character.id')
-    video_url = serializers.URLField(source='video_uri') # voe3Video 필드명
+    video_url = serializers.URLField(source='video_uri') # veo3Video 필드명
     thumbnail_url = serializers.URLField()

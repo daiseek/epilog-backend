@@ -8,7 +8,7 @@ from books.gpt_client import summarize_with_gpt # GPT를 이용한 pdf 책 요�
 from books.s3_client import upload_to_s3 # S3에 파일을 업로드하는 함수
 from .serializers import BookCreateSerializer, BookPdfUploadSerializer, BookOfficialResponseSerializer, BookVideoResponseSerializer
 from .models import Book
-from voe3Video.models import Video
+from veo3Video.models import Video
 # Create your views here.
 
 # 책 입력 API 2가지를 정의함

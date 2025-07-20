@@ -85,7 +85,7 @@ class ScriptGenerateView(APIView):
 
         # 장면 개수 결정
         desc_length = len(character.characterDescription)
-        scene_count = 2 if desc_length < 100 else 3 if desc_length < 200 else 4 if desc_length < 400 else 5
+        scene_count = 3
 
         # 조연 캐릭터 정보 수집
         sub_characters = Character.objects.filter(
