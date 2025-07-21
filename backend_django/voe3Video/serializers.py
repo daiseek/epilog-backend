@@ -6,3 +6,20 @@ class VideoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Video
         fields = '__all__' #  Video 모델에 있는 모든 필드를 포함하여 직렬화(serialization)하라는 의미입니다.
+
+# GET /videos/{videoId} API를 위한 응답 Serializer
+class VideoDetailSerializer(serializers.ModelSerializer):
+    video_id = serializers.IntegerField(source='id', read_only=True)
+    video_title = serializers.CharField(source='title', read_only=True)
+    video_url = serializers.CharField(source='video_uri', read_only=True, allow_null=True)
+    thumbnail_url = serializers.CharField(read_only=True, allow_null=True)
+    
+    class Meta:
+        model = Video
+        fields = ['video_id', 'video_title', 'video_url', 'thumbnail_url']
+
+# 에러 응답을 위한 Serializer
+class VideoErrorResponseSerializer(serializers.Serializer):
+    status = serializers.CharField(help_text="에러 상태")
+    error_code = serializers.IntegerField(help_text="에러 코드")
+    message = serializers.CharField(help_text="에러 메시지")
