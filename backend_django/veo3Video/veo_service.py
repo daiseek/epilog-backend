@@ -95,6 +95,7 @@ def generate_video_from_text(prompt: str, title: str, character_id: int = None, 
         temp_output_prefix = f"{GOOGLE_CLOUD_GCS_BUCKET.rstrip('/')}/{temp_folder_name}/"
 
         # Veo 3 모델 로드, 비디오 생성 요청 전송
+        print(f"[Veo] Generating video with prompt: {prompt}")
         operation = client.models.generate_videos(
             model="veo-3.0-generate-preview",
             prompt=prompt,
@@ -102,18 +103,23 @@ def generate_video_from_text(prompt: str, title: str, character_id: int = None, 
                 output_gcs_uri=temp_output_prefix,
             ),
         )
+        print(f"[Veo] Operation started: {operation.name}")
 
         # 비디오 생성 완료까지 폴링.
         # 폴링기법, sychronize 등의 기법이 있는데 구현도 간편하고 전송여부를 확인하기 위함
         while not operation.done:
+            print(f"[Veo] Operation {operation.name} is not yet done. Status: {operation.metadata.state if operation.metadata else 'N/A'}")
             time.sleep(15)
             operation = client.operations.get(operation)
+        print(f"[Veo] Operation {operation.name} completed. Done: {operation.done}")
 
         # operation이 완료되고 응답 및 생성된 비디오 정보가 있는지 확인.
         if operation.response and operation.result.generated_videos:
+            print(f"[Veo] Video generation successful. Found {len(operation.result.generated_videos)} generated videos.")
             # 2. 생성된 비디오 정보 가져오기
             temp_video_info = operation.result.generated_videos[0]
             temp_video_uri = temp_video_info.video.uri  # 임시 GCS URI
+            print(f"[Veo] Temporary video URI: {temp_video_uri}")
 
             # 3. GCS에서 파일 이동 및 이름 변경
             storage_client = storage.Client()
@@ -130,21 +136,26 @@ def generate_video_from_text(prompt: str, title: str, character_id: int = None, 
             video_index = Video.objects.count()
             # 최종 저장될 폴더 및 파일명 설정
             final_blob_name = f"generated_videos/video_{video_index}.mp4"
+            print(f"[Veo] Final blob name: {final_blob_name}")
             
             # 파일을 새 위치로 복사(이름 변경)
             destination_blob = source_bucket.copy_blob(
                 source_blob, source_bucket, final_blob_name
             )
+            print(f"[Veo] Copied {temp_blob_name} to {final_blob_name}")
             
             # 4. 임시 파일 및 폴더 삭제
+            print(f"[Veo] Deleting temporary source blob: {temp_blob_name}")
             source_blob.delete() # 원본 임시 파일 삭제
             # 임시 폴더 내 다른 파일(예: 메타데이터 파일)이 있을 수 있으므로, 접두사로 검색하여 모두 삭제
+            print(f"[Veo] Deleting temporary folder: {temp_folder_name}/")
             blobs_to_delete = list(source_bucket.list_blobs(prefix=f"{temp_folder_name}/"))
             for blob in blobs_to_delete:
                 blob.delete()
 
             # 5. 최종 URI로 데이터베이스에 저장 및 반환
             final_video_uri = f"gs://{bucket_name}/{final_blob_name}"
+            print(f"[Veo] Final GCS URI: {final_video_uri}")
             signed_url = generate_signed_url(final_video_uri)
 
             Video.objects.create(

@@ -71,7 +71,8 @@ services:
     environment:
       DJANGO_ENV: dev # 개발 환경 설정
       GOOGLE_APPLICATION_CREDENTIALS: /app/gcp-key.json # voe key 컨테이너 내부 경로
-      CELERY_BROKER_URL: amqp://admin:1234@backend-rabbitmq:5672//
+      CELERY_BROKER_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@backend-rabbitmq:5672//
+      CELERY_RESULT_BACKEND: redis://backend-redis:6379/0
     networks:
       - backend-net
 
@@ -138,6 +139,8 @@ services:
     environment:
       DJANGO_ENV: dev
       GOOGLE_APPLICATION_CREDENTIALS: /app/gcp-key.json
+      CELERY_BROKER_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@backend-rabbitmq:5672//
+      CELERY_RESULT_BACKEND: redis://backend-redis:6379/0
     networks:
       - backend-net
 

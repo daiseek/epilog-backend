@@ -5,9 +5,11 @@ import os
 import tempfile
 import subprocess
 from google.cloud import storage
-from .veo_service import generate_signed_url # generate_signed_url 함수 재사용
+import requests
+from .veo_service import generate_signed_url, generate_video_from_text # generate_signed_url 함수 재사용
 from .models import Video # Video 모델 임포트
 from characters.models import Character
+from narration.service.narration_service import generate_narration_for_character
 
 # 환경 변수 설정 (veo_service.py에서 가져옴)
 import os
@@ -16,25 +18,129 @@ load_dotenv()
 GOOGLE_CLOUD_GCS_BUCKET = os.getenv("GOOGLE_CLOUD_GCS_BUCKET")
 
 @shared_task
-def create_video_for_scene(character_id, prompt, title):
+def create_video_for_scene(character_id, prompt, title, lines):
     """
-    Celery 작업으로 비디오 생성을 비동기적으로 처리합니다.
+    Celery 작업으로 비디오 생성 및 나레이션 합성을 비동기적으로 처리합니다.
     """
+    video_file_path = None
+    audio_file_path = None
+    combined_file_path = None
     try:
-        # character_id를 사용하여 generate_video_from_text 함수를 호출합니다.
-        generate_video_from_text(prompt=prompt, title=title, character_id=character_id)
-    except Character.DoesNotExist:
-        # 캐릭터를 찾을 수 없는 경우 로그를 남기거나 오류 처리를 할 수 있습니다.
-        print(f"Error: Character with id {character_id} not found.")
-    except Exception as e:
-        # 기타 예외 처리
-        print(f"Error generating video for character {character_id}: {e}")
+        # 1. 나레이션 생성
+        narration_results = generate_narration_for_character(character_id=character_id, lines=lines)
+        if not narration_results or not narration_results[0].get("audioUrl"):
+            raise Exception("나레이션 생성에 실패했습니다.")
+        narration_audio_url = narration_results[0]["audioUrl"]
 
-@shared_task
-def combine_videos_task(video_uris, output_title, user_id=None, character_id=None):
+        # 2. 비디오 생성 (기존 로직 재사용)
+        video_generation_result = generate_video_from_text(prompt=prompt, title=title, character_id=character_id)
+        if not video_generation_result or not video_generation_result.get("video_uri"):
+            raise Exception("비디오 생성에 실패했습니다.")
+        video_gcs_uri = video_generation_result["video_uri"]
+
+        storage_client = storage.Client()
+        bucket_name = GOOGLE_CLOUD_GCS_BUCKET.replace("gs://", "").rstrip('/')
+        bucket = storage_client.bucket(bucket_name)
+
+        # 3. GCS에서 비디오 다운로드
+        video_blob_name = video_gcs_uri.replace(f"gs://{bucket_name}/", "")
+        video_file_path = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4").name
+        bucket.blob(video_blob_name).download_to_filename(video_file_path)
+        print(f"Downloaded video {video_gcs_uri} to {video_file_path}")
+
+        # 4. 나레이션 오디오 다운로드
+        audio_file_path = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3").name
+        audio_response = requests.get(narration_audio_url)
+        audio_response.raise_for_status() # HTTP 오류 발생 시 예외 발생
+        with open(audio_file_path, 'wb') as f:
+            f.write(audio_response.content)
+        print(f"Downloaded audio {narration_audio_url} to {audio_file_path}")
+
+        # 5. FFmpeg를 사용하여 비디오와 오디오 합성
+        combined_file_path = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4").name
+        ffmpeg_command = [
+            "ffmpeg",
+            "-i", video_file_path,
+            "-i", audio_file_path,
+            "-c:v", "copy",
+            "-c:a", "aac",
+            "-strict", "experimental",
+            "-map", "0:v:0",
+            "-map", "1:a:0",
+            "-y", # Overwrite output files without asking
+            combined_file_path
+        ]
+        print(f"Running ffmpeg command: {' '.join(ffmpeg_command)}")
+        subprocess.run(ffmpeg_command, check=True, capture_output=True)
+        print(f"Combined video and audio saved to {combined_file_path}")
+
+        # 6. 합성된 비디오를 GCS에 업로드
+        base_output_name = title.replace(' ', '_')
+        extension = ".mp4"
+        counter = 0
+        output_blob_name = f"generated_videos/{base_output_name}{extension}"
+
+        while bucket.blob(output_blob_name).exists():
+            counter += 1
+            output_blob_name = f"generated_videos/{base_output_name}_{counter}{extension}"
+        
+        output_blob = bucket.blob(output_blob_name)
+        output_blob.upload_from_filename(combined_file_path)
+        final_gcs_uri = f"gs://{bucket_name}/{output_blob_name}"
+        print(f"Uploaded combined video with narration to {final_gcs_uri}")
+
+        # 7. 데이터베이스 업데이트
+        signed_url = generate_signed_url(final_gcs_uri)
+        Video.objects.create(
+            video_uri=final_gcs_uri,
+            prompt=prompt,
+            title=title,
+            user_id=None, # user_id는 필요에 따라 설정
+            character_id=character_id,
+            narration_audio_url=narration_audio_url # 나레이션 URL 저장
+        )
+        print(f"Video with narration metadata saved to DB: {title}")
+
+        return {"status": "success", "gcs_uri": final_gcs_uri, "signed_url": signed_url}
+
+    except Character.DoesNotExist:
+        print(f"Error: Character with id {character_id} not found.")
+        raise
+    except subprocess.CalledProcessError as e:
+        print(f"FFmpeg command failed: {e}")
+        print(f"Stdout: {e.stdout.decode()}")
+        print(f"Stderr: {e.stderr.decode()}")
+        raise
+    except Exception as e:
+        print(f"Error in create_video_for_scene: {e}")
+        raise
+    finally:
+        # 임시 파일 정리
+        for f in [video_file_path, audio_file_path, combined_file_path]:
+            if f and os.path.exists(f):
+                os.remove(f)
+                print(f"Cleaned up temporary file: {f}")
+
+@shared_task(bind=True)
+def combine_videos_task(self, results, output_title, user_id=None, character_id=None):
     """
     여러 GCS 비디오 URI를 받아 하나의 비디오로 합치고 GCS에 업로드합니다.
+    이 태스크는 Celery chord의 콜백으로 사용됩니다.
     """
+    video_uris = []
+    for result in results:
+        if result and result.get('status') == 'success':
+            video_uris.append(result.get('gcs_uri'))
+        else:
+            # 하나의 태스크라도 실패하면 전체 작업을 중단하고 실패 상태로 업데이트
+            self.update_state(state='FAILURE', meta={'reason': 'One of the scene generation tasks failed.'})
+            # 실패한 경우, 예외를 발생시켜서 체인을 중단
+            raise Exception("Failed to generate one or more scene videos.")
+
+    if not video_uris:
+        self.update_state(state='FAILURE', meta={'reason': 'No video URIs were returned from the scene generation tasks.'})
+        raise Exception("No video URIs to combine.")
+
     storage_client = storage.Client()
     bucket_name = GOOGLE_CLOUD_GCS_BUCKET.replace("gs://", "").rstrip('/')
     bucket = storage_client.bucket(bucket_name)

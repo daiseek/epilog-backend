@@ -11,6 +11,11 @@ app = Celery('config')
 # namespace='CELERY'는 모든 Celery 관련 설정 키가 'CELERY_'라는 접두사를 가져야 함을 의미합니다.
 app.config_from_object('django.conf:settings', namespace='CELERY')
 
+# Celery 결과 백엔드를 명시적으로 설정
+app.conf.update(
+    CELERY_RESULT_BACKEND='redis://backend-redis:6379/0'
+)
+
 # 등록된 모든 Django 앱 설정에서 tasks.py 파일을 로드합니다.
 app.autodiscover_tasks()
 
