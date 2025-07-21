@@ -309,3 +309,30 @@ SIMPLE_JWT = {
     'JTI_CLAIM': 'jti',
 }
 
+# Swagger 설정 (JWT 인증 자동 인식)
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header',
+            'description': 'JWT Bearer 토큰을 입력하세요. 예: Bearer eyJ0eXAiOiJKV1Q...'
+        }
+    },
+    'USE_SESSION_AUTH': False,  # 세션 인증 비활성화
+    'JSON_EDITOR': True,
+    'SUPPORTED_SUBMIT_METHODS': [
+        'get',
+        'post',
+        'put',
+        'delete',
+        'patch'
+    ],
+    'OPERATIONS_SORTER': 'alpha',
+    'TAGS_SORTER': 'alpha',
+    'DOC_EXPANSION': 'none',
+    'DEEP_LINKING': True,
+    'SHOW_EXTENSIONS': True,
+    'DEFAULT_MODEL_RENDERING': 'example'
+}
+
