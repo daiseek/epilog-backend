@@ -6,7 +6,60 @@ from .veo_service import generate_video_from_text, list_videos
 
 from django.shortcuts import get_object_or_404
 from .models import Video
-from .serializers import VideoSerializer
+from .serializers import VideoSerializer, VideoDetailSerializer
+
+# 특정 비디오 조회 API 뷰
+# GET 요청을 처리하여 videoId에 해당하는 비디오 정보를 반환합니다.
+class VideoDetailView(APIView):
+    def get(self, request, video_id, *args, **kwargs):
+        print(f"🎬 [VideoDetailView] 요청 받음 - video_id: {video_id}")
+        
+        try:
+            # video_id로 비디오 조회, 존재하지 않으면 404 에러
+            print(f"🔍 [VideoDetailView] 비디오 조회 시도 - ID: {video_id}")
+            video = get_object_or_404(Video, id=video_id)
+            print(f"✅ [VideoDetailView] 비디오 조회 성공 - {video}")
+            
+            # 비디오 객체의 필드 값들 확인
+            print(f"📋 [VideoDetailView] 비디오 필드 확인:")
+            print(f"   - id: {video.id}")
+            print(f"   - title: {video.title}")
+            print(f"   - video_uri: {video.video_uri}")
+            print(f"   - thumbnail_url: {video.thumbnail_url}")
+            
+            # VideoDetailSerializer를 사용하여 응답 형식에 맞게 직렬화
+            print(f"🔧 [VideoDetailView] Serializer 생성 시도")
+            serializer = VideoDetailSerializer(video)
+            print(f"📊 [VideoDetailView] Serializer 데이터: {serializer.data}")
+            
+            # 성공 응답 반환
+            print(f"✅ [VideoDetailView] 성공 응답 반환")
+            return Response(serializer.data, status=status.HTTP_200_OK)
+            
+        except Video.DoesNotExist:
+            # 비디오를 찾을 수 없는 경우 404 에러 응답
+            print(f"❌ [VideoDetailView] 비디오 없음 - ID: {video_id}")
+            return Response({
+                "status": "error",
+                "error_code": 404,
+                "message": "비디오를 찾을 수 없습니다."
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            # 기타 예외 발생 시 500 에러 응답 + 상세 로깅
+            print(f"💥 [VideoDetailView] 예외 발생!")
+            print(f"   - 예외 타입: {type(e).__name__}")
+            print(f"   - 예외 메시지: {str(e)}")
+            
+            # 상세 스택 트레이스 출력
+            import traceback
+            print(f"   - 스택 트레이스:")
+            traceback.print_exc()
+            
+            return Response({
+                "status": "error",
+                "error_code": 500,
+                "message": f"서버 내부 오류가 발생했습니다: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # 텍스트-투-비디오 생성 API 뷰
 # POST 요청을 처리하여 텍스트 프롬프트로부터 비디오 생성을 시작합니다.

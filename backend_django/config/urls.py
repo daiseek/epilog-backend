@@ -19,6 +19,7 @@ from django.urls import path, include
 from django_prometheus import exports
 from config.views import index
 from django.conf import settings
+from voe3Video.views import VideoDetailView
 
 from django.urls import re_path
 
@@ -27,6 +28,8 @@ urlpatterns = [
     path("metrics", exports.ExportToDjangoView),
 
     path('books/', include('books.urls')),
+    # GET /videos/{videoId} 패턴을 위한 특별 라우팅 (voe3Video 앱 사용)
+    path('videos/<int:video_id>/', VideoDetailView.as_view(), name='video_detail_api'),
     path('videos/', include('videos.urls')),
     path('videos2/', include('videos2.urls')),
     path('voe3Video/', include('voe3Video.urls')),
