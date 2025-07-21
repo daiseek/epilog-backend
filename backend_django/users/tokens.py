@@ -6,11 +6,22 @@ class CustomRefreshToken(RefreshToken):
     
     @classmethod
     def for_user(cls, user):
-        """사용자를 위한 토큰 생성 시 추가 payload에 사용자 정보 포함"""
+        """사용자를 위한 토큰 생성 시 추가 payload에 사용자 정보 포함
+        """
+
         token = super().for_user(user)
+        """
+        for_user() 함수
+        payload에서 userId를 기본적으로 구성해줍니다!
+        @classmethod
+        def for_user(cls, user):
+            token = cls()
+            token[api_settings.USER_ID_CLAIM] = getattr(user, api_settings.USER_ID_FIELD)
+            return token
+        """
         
         # 기본적으로 토큰에 넣는 사용자 정보
-        token['login_id'] = user.username # 모든 API에서 필요함!
+        token['login_id'] = user.username
         token['is_deleted'] = user.is_deleted
         # token['nickname'] = user.nickname
         
