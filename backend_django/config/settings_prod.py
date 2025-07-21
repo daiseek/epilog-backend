@@ -248,7 +248,7 @@ from datetime import timedelta
 SIMPLE_JWT = {
     # 토큰 수명 (환경변수로 관리)
     'ACCESS_TOKEN_LIFETIME': timedelta(
-        minutes=env.int('JWT_ACCESS_TOKEN_LIFETIME_MINUTES', default=15)  # 프로덕션: 15분 (보안 강화)
+        minutes=env.int('JWT_ACCESS_TOKEN_LIFETIME_MINUTES', default=60)  # 프로덕션: 60분 (보안 강화)
     ),
     'REFRESH_TOKEN_LIFETIME': timedelta(
         days=env.int('JWT_REFRESH_TOKEN_LIFETIME_DAYS', default=1)  # 프로덕션: 1일 (보안 강화)

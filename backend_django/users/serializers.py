@@ -34,8 +34,8 @@ class LoginSerializer(serializers.Serializer):
             raise serializers.ValidationError('로그인 ID와 비밀번호를 모두 입력해주세요.')
 
 
-    """회원가입용 Serializer"""
 class SignupSerializer(serializers.ModelSerializer):
+    """회원가입용 Serializer"""
     # 사용자에게 입력받을 속성
     login_id = serializers.CharField(source='username')
     password = serializers.CharField(write_only=True, validators=[validate_password])
@@ -82,3 +82,57 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id', 'login_id', 'nickname', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at'] 
+
+
+# ========== Swagger 문서화를 위한 응답 Serializer들 ==========
+
+class JWTTokenResponseSerializer(serializers.Serializer):
+    """JWT 토큰 응답용 Serializer (로그인/회원가입 성공 시)"""
+    message = serializers.CharField(help_text="결과 메시지")
+    access_token = serializers.CharField(help_text="JWT 액세스 토큰 (Bearer 방식으로 사용)")
+    refresh_token = serializers.CharField(help_text="JWT 리프레시 토큰 (토큰 갱신용)")
+    user = UserSerializer(help_text="사용자 정보")
+
+    class Meta:
+        examples = {
+            "message": "로그인 성공",
+            "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+            "refresh_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+            "user": {
+                "id": 1,
+                "login_id": "testuser",
+                "nickname": "테스트유저",
+                "created_at": "2024-01-01T12:00:00Z",
+                "updated_at": "2024-01-01T12:00:00Z"
+            }
+        }
+
+
+class JWTErrorResponseSerializer(serializers.Serializer):
+    """JWT 에러 응답용 Serializer"""
+    message = serializers.CharField(help_text="에러 메시지")
+    errors = serializers.DictField(help_text="상세 에러 정보", required=False)
+
+    class Meta:
+        examples = {
+            "message": "로그인 실패",
+            "errors": {
+                "non_field_errors": ["잘못된 로그인 ID 또는 비밀번호입니다."]
+            }
+        }
+
+
+class UserInfoResponseSerializer(serializers.Serializer):
+    """사용자 정보 조회 응답용 Serializer"""
+    user = UserSerializer(help_text="인증된 사용자 정보")
+
+    class Meta:
+        examples = {
+            "user": {
+                "id": 1,
+                "login_id": "testuser",
+                "nickname": "테스트유저",
+                "created_at": "2024-01-01T12:00:00Z",
+                "updated_at": "2024-01-01T12:00:00Z"
+            }
+        } 

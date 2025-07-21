@@ -10,9 +10,22 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.parsers import JSONParser, MultiPartParser, FormParser  # 파서 추가
+from rest_framework_simplejwt.views import TokenRefreshView
+from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 # from rest_framework_simplejwt.tokens import RefreshToken  # 기본 토큰 주석처리
 from users.tokens import CustomRefreshToken  # 커스텀 토큰 사용
-from users.serializers import LoginSerializer, SignupSerializer, UserSerializer
+from users.serializers import (
+    LoginSerializer, 
+    SignupSerializer, 
+    UserSerializer,
+    JWTTokenResponseSerializer,
+    JWTErrorResponseSerializer,
+    UserInfoResponseSerializer
+)
+
+# Swagger 문서화를 위한 import
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 # ========== 기존 템플릿 기반 뷰들 (주석처리) ==========
 # def login_view(request):
@@ -89,12 +102,43 @@ from users.serializers import LoginSerializer, SignupSerializer, UserSerializer
 
 
 # ========== JWT API 뷰들 ==========
-"""JWT 로그인 API"""
 class LoginAPIView(APIView):
-    # JWT 관련 인증 로직
+    """JWT 로그인 API"""
     permission_classes = [AllowAny] # 누구나 접근 가능(로그인이기 때문에)
     parser_classes = [JSONParser, MultiPartParser, FormParser]  # 여러 파서 지원
     
+    @swagger_auto_schema(
+        operation_description="""JWT 토큰 기반 로그인 API
+        
+        사용자의 로그인 ID와 비밀번호를 검증하고, 성공 시 JWT 액세스 토큰과 리프레시 토큰을 발급합니다.
+        
+        **토큰 사용법:**
+        - 발급받은 access_token을 Authorization 헤더에 Bearer 방식으로 포함
+        - 예시: `Authorization: Bearer {access_token}`
+        
+        **토큰 만료:**
+        - Access Token: 60분 (개발환경) / 60분 (프로덕션)
+        - Refresh Token: 7일 (개발환경) / 1일 (프로덕션)
+        
+        **Payload 정보:**
+        - login_id: 사용자 로그인 ID
+        - nickname: 사용자 닉네임
+        - created_at: 계정 생성일
+        - last_login: 마지막 로그인 시간
+        """,
+        request_body=LoginSerializer,
+        responses={
+            200: JWTTokenResponseSerializer,
+            400: JWTErrorResponseSerializer
+        },
+        tags=['인증 (Authentication)'],
+        examples={
+            'application/json': {
+                'login_id': 'testuser',
+                'password': 'testpass123!'
+            }
+        }
+    )
     def post(self, request):
         '''login_id와 password의 유효성을 검사하고 직렬화'''
         serializer = LoginSerializer(data=request.data)
@@ -119,11 +163,45 @@ class LoginAPIView(APIView):
         }, status=status.HTTP_400_BAD_REQUEST)
 
 
-"""JWT 회원가입 API"""
 class SignupAPIView(APIView):
+    """JWT 회원가입 API"""
     permission_classes = [AllowAny] # 누구나 접근 가능(회원가입 기능이므로)
     parser_classes = [JSONParser, MultiPartParser, FormParser]  # 여러 파서 지원
     
+    @swagger_auto_schema(
+        operation_description="""JWT 토큰 기반 회원가입 API
+        
+        새로운 사용자 계정을 생성하고, 성공 시 자동으로 JWT 토큰을 발급하여 로그인 상태로 만듭니다.
+        
+        **필수 입력 정보:**
+        - login_id: 로그인 ID (중복 불가)
+        - password: 비밀번호 (Django 기본 검증 규칙 적용)
+        - password_confirm: 비밀번호 확인
+        - nickname: 사용자 닉네임
+        
+        **비밀번호 규칙:**
+        - 최소 8자 이상
+        - 숫자, 문자, 특수문자 조합 권장
+        - 사용자 정보와 너무 유사하면 안됨
+        
+        **회원가입 후 자동 로그인:**
+        회원가입이 성공하면 자동으로 JWT 토큰이 발급되어 별도 로그인 없이 바로 서비스 이용 가능합니다.
+        """,
+        request_body=SignupSerializer,
+        responses={
+            201: JWTTokenResponseSerializer,
+            400: JWTErrorResponseSerializer
+        },
+        tags=['인증 (Authentication)'],
+        examples={
+            'application/json': {
+                'login_id': 'newuser',
+                'password': 'newpass123!',
+                'password_confirm': 'newpass123!',
+                'nickname': '새로운유저'
+            }
+        }
+    )
     def post(self, request):
         serializer = SignupSerializer(data=request.data)
         if serializer.is_valid():
@@ -150,8 +228,100 @@ class UserInfoAPIView(APIView):
     """사용자 정보 조회 API (JWT 인증 필요)"""
     permission_classes = [IsAuthenticated] # JWT 인증이 필요한 API
     
+    @swagger_auto_schema(
+        operation_description="""JWT 인증된 사용자 정보 조회 API
+        
+        현재 로그인한 사용자의 정보를 조회합니다.
+        
+        **인증 방법:**
+        - Authorization 헤더에 Bearer 토큰 포함 필수
+        - 예시: `Authorization: Bearer {access_token}`
+        
+        **조회 가능한 정보:**
+        - id: 사용자 고유 ID
+        - login_id: 로그인 ID
+        - nickname: 닉네임
+        - created_at: 계정 생성일
+        - updated_at: 정보 수정일
+        
+        **주의사항:**
+        - 토큰이 만료된 경우 401 Unauthorized 응답
+        - 잘못된 토큰인 경우 401 Unauthorized 응답
+        """,
+        responses={
+            200: UserInfoResponseSerializer,
+            401: openapi.Response(
+                description="인증 실패", 
+                examples={
+                    "application/json": {
+                        "detail": "자격 인증데이터(authentication credentials)가 제공되지 않았습니다."
+                    }
+                }
+            )
+        },
+        tags=['사용자 정보']
+    )
     def get(self, request):
         serializer = UserSerializer(request.user)
         return Response({
             'user': serializer.data
         }, status=status.HTTP_200_OK)
+
+
+class CustomTokenRefreshView(TokenRefreshView):
+    """JWT 토큰 갱신 API (Swagger 문서화 포함)"""
+    
+    @swagger_auto_schema(
+        operation_description="""JWT 토큰 갱신 API
+        
+        만료된 Access Token을 새로운 Access Token으로 갱신합니다.
+        
+        **사용 시나리오:**
+        - Access Token이 만료되었을 때 (401 Unauthorized 응답 시)
+        - 로그아웃 없이 지속적인 서비스 이용을 위해
+        
+        **갱신 과정:**
+        1. 로그인/회원가입 시 받은 refresh_token을 요청 Body에 포함
+        2. 서버에서 refresh_token 검증
+        3. 유효한 경우 새로운 access_token 발급
+        4. 설정에 따라 새로운 refresh_token도 함께 발급 (ROTATE_REFRESH_TOKENS=True)
+        
+        **토큰 순환 정책:**
+        - ROTATE_REFRESH_TOKENS=True: 갱신 시 새로운 refresh_token도 발급
+        - BLACKLIST_AFTER_ROTATION=True: 기존 refresh_token 무효화
+        
+        **주의사항:**
+        - refresh_token이 만료된 경우 다시 로그인 필요
+        - 잘못된 refresh_token인 경우 401 Unauthorized 응답
+        """,
+        request_body=TokenRefreshSerializer,
+        responses={
+            200: openapi.Response(
+                description="토큰 갱신 성공",
+                examples={
+                    "application/json": {
+                        "access": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+                        "refresh": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."  # ROTATE_REFRESH_TOKENS=True인 경우만
+                    }
+                }
+            ),
+            401: openapi.Response(
+                description="토큰 갱신 실패",
+                examples={
+                    "application/json": {
+                        "detail": "토큰이 잘못되었거나 만료되었습니다.",
+                        "code": "token_not_valid"
+                    }
+                }
+            )
+        },
+        tags=['인증 (Authentication)'],
+        examples={
+            'application/json': {
+                'refresh': 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...'
+            }
+        }
+    )
+    def post(self, request, *args, **kwargs):
+        """JWT 토큰 갱신 (부모 클래스 기능 그대로 사용)"""
+        return super().post(request, *args, **kwargs)
