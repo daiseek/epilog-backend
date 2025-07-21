@@ -80,6 +80,7 @@ INSTALLED_APPS = [
     'voe3Video',
 
     'users', # Users 애플리케이션 추가
+    'narration', # Narration 애플리케이션 추가
 
     # 's3test', # S3 테스트용 앱
 
@@ -88,6 +89,8 @@ INSTALLED_APPS = [
     'rest_framework', # Django REST framework 추가
     'storages', # Django Storages 추가
     'rest_framework_simplejwt', # JWT 인증 추가
+    'drf_yasg', # Django REST framework Swagger 추가
+    'corsheaders', # CORS 허용 허락
 
     'django.contrib.admin',
     'django.contrib.auth',
