@@ -1,6 +1,4 @@
 # settings_prod.py
-
-
 """
 Django settings for backend_django project.
 
@@ -49,11 +47,67 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 # 배포 서버
 BACKEND_DOMAIN = 'epi-log.site'
 
+# CORS 설정 (배포용)
+CORS_ALLOWED_ORIGINS = [
+    "https://epi-log.site",
+    "http://epi-log.site",
+    "https://www.epi-log.site",
+    "http://www.epi-log.site",
+]
+
+# 개발/테스트용 (Postman, 로컬 클라이언트 등)
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://.*\.epi-log\.site$",
+    r"^http://.*\.epi-log\.site$",
+]
+
+# 추가 허용 오리진 (필요시)
+# CORS_ALLOWED_ORIGINS += [
+#     "http://localhost:3000",    # React 개발 서버
+#     "http://127.0.0.1:3000",   # 로컬 프론트엔드
+# ]
+
+# CORS 헤더 설정
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = False  # 보안: 특정 도메인만 허용
+
+# CORS 허용 헤더 (JWT 토큰 전송용)
+CORS_ALLOW_HEADERS = [
+    'authorization',
+    'content-type',
+    'x-csrftoken',
+    'x-requested-with',
+    'x-password',
+    'accept',
+    'origin',
+    'user-agent',
+]
+
+CORS_ALLOW_METHODS = [
+    'GET',
+    'POST',
+    'PUT',
+    'PATCH',
+    'DELETE',
+    'OPTIONS',
+]
+
+# CSRF 신뢰할 수 있는 출처 설정
+CSRF_TRUSTED_ORIGINS = [
+    "https://epi-log.site",
+    "http://epi-log.site", 
+    "https://www.epi-log.site",
+    "http://www.epi-log.site",
+]
+
+# 참고: Django REST Framework의 APIView는 자동으로 csrf_exempt 적용됨
+# JWT 기반 API에서는 별도 CSRF 설정 불필요
+
 # 배포용/(근데 실제로 사용은 안했음.)
-SECURE_SSL_REDIRECT = False
+SECURE_SSL_REDIRECT = True
 SECURE_REDIRECT_EXEMPT = [r'^metrics/?$']  # /metrics 경로는 HTTPS 리다이렉트 제외
-SESSION_COOKIE_SECURE = False
-CSRF_COOKIE_SECURE = False
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
 
 
 # OpenAI API 키
@@ -102,6 +156,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django_prometheus.middleware.PrometheusBeforeMiddleware',
+    'corsheaders.middleware.CorsMiddleware',  # CORS 미들웨어 추가
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -243,6 +298,14 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+    ],
+    'DEFAULT_PARSER_CLASSES': [
+        'rest_framework.parsers.JSONParser',
+        'rest_framework.parsers.FormParser',
+        'rest_framework.parsers.MultiPartParser',
+    ],
 }
 
 # Simple JWT 설정 (배포용 - 환경변수로 관리)
@@ -275,6 +338,16 @@ SIMPLE_JWT = {
     'USER_ID_FIELD': 'id',
     'USER_ID_CLAIM': 'user_id',
     'USER_AUTHENTICATION_RULE': 'rest_framework_simplejwt.authentication.default_user_authentication_rule',
+
+    "AUTH_COOKIE_ACCESS": "access",
+    "AUTH_COOKIE_REFRESH": "refresh",
+    "AUTH_COOKIE_SAMESITE": "Lax",
+    "AUTH_COOKIE_SECURE": True,     # 운영이면 True 필수
+    "AUTH_COOKIE_HTTP_ONLY": True,
+    "AUTH_COOKIE_PATH": "/",
+    "AUTH_COOKIE_DOMAIN": "epi-log.site",
+    "AUTH_COOKIE_ACCESS_MAX_AGE": 60 * 60 * 24,
+    "AUTH_COOKIE_REFRESH_MAX_AGE": 60 * 60 * 24 * 7,
     
     # 토큰 클래스 설정
     'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),

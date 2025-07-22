@@ -1,0 +1,78 @@
+# Python 캐시 파일
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# 가상환경
+venv/
+env/
+ENV/
+
+# IDE 설정
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS 파일
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Docker 관련
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# 로그 파일
+*.log
+
+# 데이터베이스
+*.db
+*.sqlite3
+
+# 환경 변수 파일
+.env*
+
+# 테스트 커버리지
+.coverage
+htmlcov/
+
+# 노드 모듈 (있는 경우)
+node_modules/
+
+# 임시 파일
+*.tmp
+*.temp
+
+# 정적 파일 (빌드 시 생성되므로)
+staticfiles/
+
+# 미디어 파일 (운영에서는 S3 사용)
+media/
+
+# 백업 파일
+*.bak
+*.backup
+
+# 압축 파일
+*.zip
+*.tar.gz
+*.rar
+
+# 문서
+README.md
+docs/
+
+# 테스트 관련
+pytest_cache/
+.tox/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json 
