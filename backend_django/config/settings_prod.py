@@ -1,3 +1,4 @@
+# settings_prod.py
 """
 Django settings for backend_django project.
 
@@ -19,6 +20,7 @@ AUTH_USER_MODEL = 'users.User'
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Initialize environment variables
 env = environ.Env(
     # set casting, default value
     DEBUG=(bool, False)
@@ -45,15 +47,74 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 # 배포 서버
 BACKEND_DOMAIN = 'epi-log.site'
 
+# CORS 설정 (배포용)
+CORS_ALLOWED_ORIGINS = [
+    "https://epi-log.site",
+    "http://epi-log.site",
+    "https://www.epi-log.site",
+    "http://www.epi-log.site",
+]
+
+# 개발/테스트용 (Postman, 로컬 클라이언트 등)
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://.*\.epi-log\.site$",
+    r"^http://.*\.epi-log\.site$",
+]
+
+# 추가 허용 오리진 (필요시)
+# CORS_ALLOWED_ORIGINS += [
+#     "http://localhost:3000",    # React 개발 서버
+#     "http://127.0.0.1:3000",   # 로컬 프론트엔드
+# ]
+
+# CORS 헤더 설정
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = False  # 보안: 특정 도메인만 허용
+
+# CORS 허용 헤더 (JWT 토큰 전송용)
+CORS_ALLOW_HEADERS = [
+    'authorization',
+    'content-type',
+    'x-csrftoken',
+    'x-requested-with',
+    'x-password',
+    'accept',
+    'origin',
+    'user-agent',
+]
+
+CORS_ALLOW_METHODS = [
+    'GET',
+    'POST',
+    'PUT',
+    'PATCH',
+    'DELETE',
+    'OPTIONS',
+]
+
+# CSRF 신뢰할 수 있는 출처 설정
+CSRF_TRUSTED_ORIGINS = [
+    "https://epi-log.site",
+    "http://epi-log.site", 
+    "https://www.epi-log.site",
+    "http://www.epi-log.site",
+]
+
+# 참고: Django REST Framework의 APIView는 자동으로 csrf_exempt 적용됨
+# JWT 기반 API에서는 별도 CSRF 설정 불필요
+
 # 배포용/(근데 실제로 사용은 안했음.)
-SECURE_SSL_REDIRECT = False
+SECURE_SSL_REDIRECT = True
 SECURE_REDIRECT_EXEMPT = [r'^metrics/?$']  # /metrics 경로는 HTTPS 리다이렉트 제외
-SESSION_COOKIE_SECURE = False
-CSRF_COOKIE_SECURE = False
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
 
 
 # OpenAI API 키
 OPENAI_API_KEY = env('OPENAI_API_KEY')
+
+# Gemini API 키
+GEMINI_API_KEY = env('GEMINI_API_KEY')
 
 # Runway API 키
 RUNWAY_API_KEY = env('RUNWAY_API_KEY')
@@ -73,6 +134,7 @@ INSTALLED_APPS = [
     'veo3Video',
 
     'users', # Users 애플리케이션 추가
+    'narration', # Narration 애플리케이션 추가
 
     # 's3test', # S3 테스트용 앱
 
@@ -80,6 +142,10 @@ INSTALLED_APPS = [
     'django_prometheus', # Django Prometheus 추가
     'rest_framework', # Django REST framework 추가
     'storages', # Django Storages 추가
+    'rest_framework_simplejwt', # JWT 인증 추가
+    'rest_framework_simplejwt.token_blacklist', # JWT 토큰 블랙리스트 추가
+    'drf_yasg', # Django REST framework Swagger 추가
+    'corsheaders', # CORS 허용 허락
 
     'django.contrib.admin',
     'django.contrib.auth',
@@ -91,6 +157,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django_prometheus.middleware.PrometheusBeforeMiddleware',
+    'corsheaders.middleware.CorsMiddleware',  # CORS 미들웨어 추가
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -223,3 +290,70 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # 이 부분을 꼭 추가해야 함
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# Django REST Framework 설정 (배포용)
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+    ],
+    'DEFAULT_PARSER_CLASSES': [
+        'rest_framework.parsers.JSONParser',
+        'rest_framework.parsers.FormParser',
+        'rest_framework.parsers.MultiPartParser',
+    ],
+}
+
+# Simple JWT 설정 (배포용 - 환경변수로 관리)
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    # 토큰 수명 (환경변수로 관리)
+    'ACCESS_TOKEN_LIFETIME': timedelta(
+        minutes=env.int('JWT_ACCESS_TOKEN_LIFETIME_MINUTES', default=60)  # 프로덕션: 60분 (보안 강화)
+    ),
+    'REFRESH_TOKEN_LIFETIME': timedelta(
+        days=env.int('JWT_REFRESH_TOKEN_LIFETIME_DAYS', default=1)  # 프로덕션: 1일 (보안 강화)
+    ),
+    
+    # 토큰 정책 (환경변수로 관리)
+    'ROTATE_REFRESH_TOKENS': env.bool('JWT_ROTATE_REFRESH_TOKENS', default=True),
+    'BLACKLIST_AFTER_ROTATION': env.bool('JWT_BLACKLIST_AFTER_ROTATION', default=True),
+    'UPDATE_LAST_LOGIN': env.bool('JWT_UPDATE_LAST_LOGIN', default=True),
+    
+    # 보안 설정 (환경변수로 관리)
+    'ALGORITHM': env('JWT_ALGORITHM', default='HS256'),
+    'SIGNING_KEY': env('JWT_SECRET_KEY', default=SECRET_KEY),  # JWT 전용 키 또는 Django 키 fallback
+    'VERIFYING_KEY': None,
+    'AUDIENCE': env('JWT_AUDIENCE', default=None),  # 토큰 수신자
+    'ISSUER': env('JWT_ISSUER', default=None),      # 토큰 발급자
+    
+    # 헤더 설정
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+    'USER_AUTHENTICATION_RULE': 'rest_framework_simplejwt.authentication.default_user_authentication_rule',
+
+    "AUTH_COOKIE_ACCESS": "access",
+    "AUTH_COOKIE_REFRESH": "refresh",
+    "AUTH_COOKIE_SAMESITE": "Lax",
+    "AUTH_COOKIE_SECURE": True,     # 운영이면 True 필수
+    "AUTH_COOKIE_HTTP_ONLY": True,
+    "AUTH_COOKIE_PATH": "/",
+    "AUTH_COOKIE_DOMAIN": "epi-log.site",
+    "AUTH_COOKIE_ACCESS_MAX_AGE": 60 * 60 * 24,
+    "AUTH_COOKIE_REFRESH_MAX_AGE": 60 * 60 * 24 * 7,
+    
+    # 토큰 클래스 설정
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+    'TOKEN_TYPE_CLAIM': 'token_type',
+    'TOKEN_USER_CLASS': 'rest_framework_simplejwt.models.TokenUser',
+    
+    'JTI_CLAIM': 'jti',
+}

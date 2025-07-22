@@ -53,6 +53,7 @@ services:
     image: backend-django
     container_name: backend-django
     build: .
+    command: sh -c "uv pip install --system --no-cache-dir -r requirements.txt && python manage.py runserver 0.0.0.0:8000"
     volumes:
       - .:/backend
       - ./gcp-key.json:/app/gcp-key.json # GCP veo 키 파일 마운트
@@ -77,14 +78,14 @@ services:
       - backend-net
 
     # 🐕 개발용
-    # develop:
-    #   watch:
-    #     - path: .
-    #       target: /backend
-    #       action: sync+restart
-    #     - path: ./requirements.txt
-    #       target: /backend/requirements.txt
-    #       action: rebuild
+    develop:
+      watch:
+        - path: .
+          target: /backend
+          action: sync+restart
+        - path: ./requirements.txt
+          target: /backend/requirements.txt
+          action: rebuild
 
   # Prometheus 모니터링 서비스 설정
   backend-prometheus:
