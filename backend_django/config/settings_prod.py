@@ -325,6 +325,16 @@ SIMPLE_JWT = {
     'USER_ID_FIELD': 'id',
     'USER_ID_CLAIM': 'user_id',
     'USER_AUTHENTICATION_RULE': 'rest_framework_simplejwt.authentication.default_user_authentication_rule',
+
+    "AUTH_COOKIE_ACCESS": "access",
+    "AUTH_COOKIE_REFRESH": "refresh",
+    "AUTH_COOKIE_SAMESITE": "Lax",
+    "AUTH_COOKIE_SECURE": True,     # 운영이면 True 필수
+    "AUTH_COOKIE_HTTP_ONLY": True,
+    "AUTH_COOKIE_PATH": "/",
+    "AUTH_COOKIE_DOMAIN": "epi-log.site",
+    "AUTH_COOKIE_ACCESS_MAX_AGE": 60 * 60 * 24,
+    "AUTH_COOKIE_REFRESH_MAX_AGE": 60 * 60 * 24 * 7,
     
     # 토큰 클래스 설정
     'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
