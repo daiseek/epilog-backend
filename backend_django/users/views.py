@@ -14,6 +14,8 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 # from rest_framework_simplejwt.tokens import RefreshToken  # 기본 토큰 주석처리
 from users.tokens import CustomRefreshToken  # 커스텀 토큰 사용
+from django.views.decorators.csrf import csrf_exempt  # CSRF 면제 데코레이터 추가
+from django.utils.decorators import method_decorator  # 클래스 기반 뷰에 데코레이터 적용
 from users.serializers import (
     LoginSerializer, 
     SignupSerializer, 
@@ -102,6 +104,7 @@ from drf_yasg import openapi
 
 
 # ========== JWT API 뷰들 ==========
+@method_decorator(csrf_exempt, name='dispatch')
 class LoginAPIView(APIView):
     """JWT 로그인 API"""
     permission_classes = [AllowAny] # 누구나 접근 가능(로그인이기 때문에)
@@ -163,6 +166,7 @@ class LoginAPIView(APIView):
         }, status=status.HTTP_400_BAD_REQUEST)
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class SignupAPIView(APIView):
     """JWT 회원가입 API"""
     permission_classes = [AllowAny] # 누구나 접근 가능(회원가입 기능이므로)
