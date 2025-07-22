@@ -1,0 +1,87 @@
+{
+    "script_id": "scpt-8ab86916",
+    "characterId": 1,
+    "scenes": [
+        {
+            "sceneId": 1,
+            "background": "Inside the Karamazov estate, near Fyodor's private study, late evening. The grand hallway shows signs of recent struggle: an overturned chair, a scattered rug, and a lingering sense of disarray.",
+            "mood": "Tense, painful, chaotic aftermath.",
+            "style": "cinematic",
+            "camera": "close-up shot of Grigory's pained face, slowly tracking down to his hand clutching his ribs.",
+            "soundtrack": "Faint, distant muffled shouts, mixed with Grigory's pained groans and the creaking of old floorboards.",
+            "characters": [
+                {
+                    "name": "그리고리 바실리예비치 쿠투조프",
+                    "appearance": "An elderly man in a simple, sturdy servant's tunic, now disheveled and slightly torn. His white hair is mussed, and his usually stern face is contorted in pain.",
+                    "expression": "Grimacing in pain, a mix of physical agony and weary resignation.",
+                    "action": "Slowly pushing himself up from the floor, one hand clutching his side, the other bracing against a wall for support, his gaze fixed on the closed study door."
+                }
+            ],
+            "lines": [
+                {
+                    "speaker": "그리고리 바실리예비치 쿠투조프",
+                    "line_en": "Oh, my bones ache. What on earth are they doing?",
+                    "line_ko": "아이고, 뼈마디가 쑤시는구나. 대체 어쩌려고 저러는 건지…"
+                }
+            ],
+            "rewriting_prompt": "An elderly servant, Grigory Vasilievich Kutuzov, struggles to rise from the floor inside the opulent but disheveled Karamazov estate hallway during a late evening. His face, etched with profound physical pain and a deep weariness from the ceaseless family chaos, grimaces as he clutches his ribs, which throb with the recent impact. The once-sturdy servant's tunic he wears is now disarrayed, a silent testament to the recent violent confrontation. He leans heavily against a dark, ornate wooden wall, his gaze, filled with a mixture of loyalty and desperate concern, is fixed on the closed study door, from behind which muffled shouts still faintly echo. The air is thick with the tense, chaotic aftermath of the altercation, emphasizing the fragile peace of the mansion. A close-up shot captures his pained expression and his trembling hand clutching his injured side, as faint distant muffled.",
+            "rewriting_id": "scpt-8ab86916-scene-1"
+        },
+        {
+            "sceneId": 2,
+            "background": "The modest, dimly lit servants' quarters within the Karamazov estate, night. A single, flickering oil lamp casts dancing shadows on the worn wooden walls and simple furnishings. Outside, the night is dark and quiet.",
+            "mood": "Somber, reflective, weary, with a touch of melancholy.",
+            "style": "cinematic",
+            "camera": "medium shot, slowly zooming in on Grigory's contemplative face.",
+            "soundtrack": "The quiet crackle of a dying fire, distant chirping of crickets, and a melancholic, soft violin melody.",
+            "characters": [
+                {
+                    "name": "그리고리 바실리예비치 쿠투조프",
+                    "appearance": "Grigory sits on a wooden stool, his posture slightly slumped from fatigue and injury. He's still in his servant's clothes, now slightly cleaner, but his face shows deep lines of worry and exhaustion.",
+                    "expression": "A wistful, sorrowful expression, lost in deep thought.",
+                    "action": "He slowly turns an old, tarnished locket over in his hands, his gaze fixed on it as if recalling distant memories. His head is bowed slightly in contemplation."
+                },
+                {
+                    "name": "마르파 이그나치예브나",
+                    "appearance": "Grigory's wife, a woman of similar age, her face etched with the hardships of life, stands nearby. She wears a simple, practical dress.",
+                    "expression": "A worried, watchful expression, her eyes on Grigory.",
+                    "action": "She stands quietly in the background, observing her husband with a mixture of concern and understanding, occasionally sighing softly."
+                }
+            ],
+            "lines": [
+                {
+                    "speaker": "그리고리 바실리예비치 쿠투조프",
+                    "line_en": "Mistress Sofya... May you rest in peace...",
+                    "line_ko": "소피야 아씨… 부디 편히 잠드셨기를…"
+                }
+            ],
+            "rewriting_prompt": "In the modest, dimly lit servants' quarters of the sprawling Karamazov estate, an old oil lamp casts flickering, long shadows across the worn wooden walls and sparse, simple furnishings, creating an intimate yet somber atmosphere on a quiet night. Grigory Vasilievich Kutuzov, slumped slightly on a sturdy wooden stool, his posture reflecting both physical fatigue from his recent injury and the profound emotional toll of his life, slowly turns a tarnished, aged locket over and over in his calloused hands. His eyes, usually sharp and resolute, are now clouded with a wistful, almost sorrowful expression, lost in a deep contemplation of memories past. Nearby, his wife, Marfa Ignatyevna, a figure of silent, enduring strength, watches him with a mixture of concern and empathetic understanding, her presence a grounding force in the melancholic stillness. The quiet crackle of a dying fire in the.",
+            "rewriting_id": "scpt-8ab86916-scene-2"
+        },
+        {
+            "sceneId": 3,
+            "background": "The small, secluded family graveyard on the Karamazov estate, bathed in the soft, ethereal glow of a full moon. Ancient, gnarled trees stand like silent sentinels, casting long, dancing shadows over the humble graves.",
+            "mood": "Resigned, determined, sorrowful yet resolute, with a touch of quiet spiritual peace.",
+            "style": "cinematic",
+            "camera": "wide shot, slowly panning across the moonlit graveyard before settling on Grigory.",
+            "soundtrack": "Gentle night wind rustling through leaves, the distant hoot of an owl, and a solemn, hopeful choir hum.",
+            "characters": [
+                {
+                    "name": "그리고리 바실리예비치 쿠투조프",
+                    "appearance": "Grigory, wearing a slightly patched but clean servant's tunic, stands before a simple, weathered stone grave. Despite his age and recent injuries, there's a quiet strength in his stance.",
+                    "expression": "A determined yet sorrowful expression, his eyes fixed on the grave.",
+                    "action": "He kneels carefully by a small, unadorned grave marked 'Sofya I.', gently brushing away fallen leaves and placing a small, smooth stone on the marker, then looks up at the moon with a renewed sense of purpose."
+                }
+            ],
+            "lines": [
+                {
+                    "speaker": "그리고리 바실리예비치 쿠투조프",
+                    "line_en": "Young Master Alyosha... Please grow up upright.",
+                    "line_ko": "알료샤 도련님… 부디 올곧게 자라주소서."
+                }
+            ],
+            "rewriting_prompt": "Under the soft, ethereal glow of a full moon, the secluded family graveyard on the sprawling Karamazov estate unfolds, a silent sanctuary amidst ancient, gnarled trees that stand like stoic sentinels, casting long, dancing shadows across the humble, weathered graves. Grigory Vasilievich Kutuzov, a figure of enduring loyalty and quiet strength despite his age and recent physical torment, kneels with careful reverence before a simple, unadorned stone grave, its inscription 'Sofya I.' barely visible. His patched but clean servant's tunic suggests a return to his duties, albeit with a noticeable, slight limp. With tender, weathered hands, he gently brushes away the scattered fallen leaves, a small act of devotion, before carefully placing a smooth, small stone on the marker, a traditional gesture of remembrance. His expression, a blend of profound sorrow and unwavering determination, shifts.",
+                "rewriting_id": "scpt-8ab86916-scene-3"
+            }
+        ]
+    }

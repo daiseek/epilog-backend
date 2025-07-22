@@ -1,7 +1,7 @@
 from django.urls import path
-from .views import TextToVideoView, VideoListView, VideoBookmarkToggleView, BookmarkedVideoListView, VideoDetailView
+from .views import TextToVideoView, VideoListView, VideoBookmarkToggleView, BookmarkedVideoListView, VideoGenerationFromScriptView, CombineVideosView, FullStoryGenerationView, ScriptCacheView
 
-# voe3Video 앱의 URL 패턴을 정의합니다.
+# veo3Video 앱의 URL 패턴을 정의합니다.
 # 이 파일은 config/urls.py에서 include되어 사용됩니다.
 urlpatterns = [
     # TextToVideoView는 POST 요청을 처리, 텍스트로부터 비디오 생성 요청.
@@ -16,8 +16,8 @@ urlpatterns = [
 
     path('bookmarks/videos/<int:videoId>', VideoBookmarkToggleView.as_view(), name = 'toggle_bookmark'),
     path('bookmarks/bookmarked', BookmarkedVideoListView.as_view(), name = 'list_bookmarked_videos'),
-    
-    # GET /videos/{videoId} API를 위한 URL 패턴
-    # 특정 비디오의 상세 정보를 조회합니다.
-    path('detail/<int:video_id>/', VideoDetailView.as_view(), name='video_detail'),
+    path('generate/script/<str:script_id>/', VideoGenerationFromScriptView.as_view(), name='generate_video_from_script'),
+    path('combine/', CombineVideosView.as_view(), name='combine_videos'),
+    path('generate/full-story/', FullStoryGenerationView.as_view(), name='generate_full_story'),
+    path('cache-script/', ScriptCacheView.as_view(), name='cache_script'),
 ]

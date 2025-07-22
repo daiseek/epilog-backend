@@ -46,7 +46,7 @@ services:
       backend-redis:
         condition: service_started
     env_file:
-      - ./.env.prod
+      - ./.env.dev.prod
     environment:
       DJANGO_ENV: prod # 배포 환경 설정
       GOOGLE_APPLICATION_CREDENTIALS: /app/gcp-key.json # veo3 key 컨테이너 내부 경로

@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('voe3Video', '0001_initial'),
+        ('veo3Video', '0001_initial'),
     ]
 
     operations = [

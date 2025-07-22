@@ -2,7 +2,7 @@ import os
 from django.core.management.base import BaseCommand
 from google.cloud import storage
 from django.conf import settings
-from voe3Video.models import Video
+from veo3Video.models import Video
 
 class Command(BaseCommand):
     help = 'Imports video metadata from Google Cloud Storage into the Django database.'

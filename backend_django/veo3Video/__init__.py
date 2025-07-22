@@ -1,4 +1,4 @@
-# voe3Video Django 애플리케이션 패키지
+# veo3Video Django 애플리케이션 패키지
 # 이 디렉토리는 Google Cloud Vertex AI의 Veo 3 API를 사용하여 텍스트-투-비디오(Text-to-Video) 기능을 구현하는 앱입니다.
 #
 # 주요 기능:

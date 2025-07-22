@@ -26,9 +26,9 @@ env = environ.Env(
     DEBUG=(bool, False)
 )
 
-# reading .env file
+# reading .env.dev file
 environ.Env.read_env(
-    env_file=os.path.join(BASE_DIR, '.env')
+    env_file=os.path.join(BASE_DIR, '.env.dev')
 )
 
 # False if not in os.environ because of casting above
@@ -93,8 +93,7 @@ INSTALLED_APPS = [
     'books', # Books 애플리케이션 추가
     'characters', # Characters 애플리케이션 추가
 
-    'videos2',
-    'voe3Video',
+    'veo3Video',
 
     'users', # Users 애플리케이션 추가
     'narration', # Narration 애플리케이션 추가
@@ -120,7 +119,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django_prometheus.middleware.PrometheusBeforeMiddleware',
-    'corsheaders.middleware.CorsMiddleware', 
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -261,6 +260,15 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # 이 부분을 꼭 추가해야 함
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
+# Celery 설정
+CELERY_BROKER_URL = env('CELERY_BROKER_URL', default='amqp://admin:1234@backend-rabbitmq:5672//')
+CELERY_RESULT_BACKEND = f'redis://{env("REDIS_HOST", default="backend-redis")}:{env("REDIS_PORT", default="6379")}/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'Asia/Seoul'
+
+
 # Django REST Framework 설정
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -282,31 +290,31 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(
         days=env.int('JWT_REFRESH_TOKEN_LIFETIME_DAYS', default=7)  # 개발: 7일 (개발 편의성)
     ),
-    
+
     # 토큰 정책 (환경변수로 관리)
     'ROTATE_REFRESH_TOKENS': env.bool('JWT_ROTATE_REFRESH_TOKENS', default=True),
     'BLACKLIST_AFTER_ROTATION': env.bool('JWT_BLACKLIST_AFTER_ROTATION', default=True),
     'UPDATE_LAST_LOGIN': env.bool('JWT_UPDATE_LAST_LOGIN', default=True),
-    
+
     # 보안 설정 (환경변수로 관리)
     'ALGORITHM': env('JWT_ALGORITHM', default='HS256'),
     'SIGNING_KEY': env('JWT_SECRET_KEY', default=SECRET_KEY),  # JWT 전용 키 또는 Django 키 fallback
     'VERIFYING_KEY': None,
     'AUDIENCE': env('JWT_AUDIENCE', default=None),  # 토큰 수신자
     'ISSUER': env('JWT_ISSUER', default=None),      # 토큰 발급자
-    
+
     # 헤더 설정
     'AUTH_HEADER_TYPES': ('Bearer',),
     'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
     'USER_ID_FIELD': 'id',
     'USER_ID_CLAIM': 'user_id',
     'USER_AUTHENTICATION_RULE': 'rest_framework_simplejwt.authentication.default_user_authentication_rule',
-    
+
     # 토큰 클래스 설정
     'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
     'TOKEN_TYPE_CLAIM': 'token_type',
     'TOKEN_USER_CLASS': 'rest_framework_simplejwt.models.TokenUser',
-    
+
     'JTI_CLAIM': 'jti',
 }
 

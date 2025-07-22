@@ -19,20 +19,13 @@ from django.urls import path, include
 from django_prometheus import exports
 from config.views import index
 from django.conf import settings
-from voe3Video.views import VideoDetailView
-
 from django.urls import re_path
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path("metrics", exports.ExportToDjangoView),
-
-    path('books/', include('books.urls')),
-    # GET /videos/{videoId} 패턴을 위한 특별 라우팅 (voe3Video 앱 사용)
-    path('videos/<int:video_id>/', VideoDetailView.as_view(), name='video_detail_api'),
-    path('videos/', include('videos.urls')),
-    path('videos2/', include('videos2.urls')),
-    path('voe3Video/', include('voe3Video.urls')),
+    path('books/', include('books.urls')),  # Books 애플리케이션의 URL 포함
+    path('veo3Video/', include('veo3Video.urls')),
     path('characters/', include('characters.urls')),
     path('users/', include('users.urls')),
     path("", index),
@@ -85,6 +78,6 @@ JWT Bearer Token 인증을 사용합니다.
         re_path(r'^redoc/$', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
         re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
     ]
-    
+
     # 개발환경에서 정적 파일 서빙
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

@@ -40,16 +40,16 @@ class BookOfficialResponseSerializer(serializers.Serializer):
 class BookVideoResponseSerializer(serializers.Serializer):
     video_id=serializers.IntegerField(source='id')
     character_id=serializers.IntegerField(source='character.id')
-    video_url = serializers.URLField(source='video_uri') # voe3Video 필드명
+    video_url = serializers.URLField(source='video_uri') # veo3Video 필드명
     thumbnail_url = serializers.URLField()
 
 class BookCharacterResponseSerializer(serializers.Serializer):
     character_id = serializers.IntegerField(source='id')
     character_name = serializers.CharField(source='characterName')  # camelCase 필드명
-    is_main = serializers.BooleanField(source='isMain')      
+    is_main = serializers.BooleanField(source='isMain')
     age = serializers.IntegerField()
     gender = serializers.CharField()
-    character_description = serializers.CharField(source='characterDescription')  
+    character_description = serializers.CharField(source='characterDescription')
 
 # Swagger 문서화를 위한 응답 Serializer들
 class BookErrorResponseSerializer(serializers.Serializer):
@@ -62,4 +62,4 @@ class BookSuccessResponseSerializer(serializers.Serializer):
     book_id = serializers.IntegerField(help_text="책 ID")
     title = serializers.CharField(help_text="책 제목")
     content = serializers.CharField(help_text="책 내용 요약")
-    pdf_url = serializers.CharField(help_text="PDF 파일 URL", allow_null=True)  
+    pdf_url = serializers.CharField(help_text="PDF 파일 URL", allow_null=True)

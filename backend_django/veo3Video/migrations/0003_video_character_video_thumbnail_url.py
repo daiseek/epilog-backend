@@ -8,7 +8,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('characters', '0001_initial'),
-        ('voe3Video', '0002_alter_video_video_uri'),
+        ('veo3Video', '0002_alter_video_video_uri'),
     ]
 
     operations = [
