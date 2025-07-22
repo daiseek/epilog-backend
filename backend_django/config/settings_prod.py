@@ -57,15 +57,29 @@ CORS_ALLOWED_ORIGINS = [
     "http://www.epi-log.site",
 ]
 
-# 개발/테스트용 (필요시)
+# 개발/테스트용 (Postman, 로컬 클라이언트 등)
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^https://.*\.epi-log\.site$",
     r"^http://.*\.epi-log\.site$",
 ]
 
+# 추가 허용 오리진 (필요시)
+# CORS_ALLOWED_ORIGINS += [
+#     "http://localhost:3000",    # React 개발 서버
+#     "http://127.0.0.1:3000",   # 로컬 프론트엔드
+# ]
+
 # CORS 헤더 설정
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_ALL_ORIGINS = False  # 보안을 위해 특정 도메인만 허용
+CORS_ALLOW_ALL_ORIGINS = False  # 보안: 특정 도메인만 허용
+
+# CORS 허용 헤더 (JWT 토큰 전송용)
+CORS_ALLOW_HEADERS = [
+    'authorization',
+    'content-type',
+    'x-csrftoken',
+    'x-requested-with',
+]
 
 # CSRF 신뢰할 수 있는 출처 설정
 CSRF_TRUSTED_ORIGINS = [
