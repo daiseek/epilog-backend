@@ -77,6 +77,19 @@ CORS_ALLOW_HEADERS = [
     'content-type',
     'x-csrftoken',
     'x-requested-with',
+    'x-password',
+    'accept',
+    'origin',
+    'user-agent',
+]
+
+CORS_ALLOW_METHODS = [
+    'GET',
+    'POST',
+    'PUT',
+    'PATCH',
+    'DELETE',
+    'OPTIONS',
 ]
 
 # CSRF 신뢰할 수 있는 출처 설정
