@@ -184,40 +184,43 @@ def generate_video_from_text(prompt: str, title: str, character_id: int = None, 
 
 # 비디오 목록을 조회하는 함수
 # 데이터베이스에 저장된 비디오 메타데이터를 조회하고, 각 비디오에 대한 서명된 URL을 생성하여 반환.
-def list_videos(user_id: int):
+
+def list_videos(user_id: int, is_combined: bool = None):
+
     """
     데이터베이스에서 비디오 목록을 조회하고 서명된 URL을 생성합니다.
 
     Args:
-        user_id (int, optional): 특정 사용자의 비디오만 필터링하기 위한 사용자 ID (User 모델의 pk). 기본값은 None.
+       user_id (int, optional): 특정 사용자의 비디오만 필터링하기 위한 사용자 ID (User 모델의 pk). 기본값은 None.
+        is_combined (bool, optional): 병합된 비디오만 필터링할지 여부. 기본값은 None (모두 조회).
 
     Returns:
         list: 비디오 정보(ID, URI, 서명된 URL, 프롬프트, 제목, 사용자 ID, 생성 시간) 딕셔너리 리스트.
     """
     try:
-        # user_id가 제공되면 해당 사용자의 비디오만 필터링하고, 그렇지 않으면 모든 비디오를 조회. (마이페이지 기능과 전체조회 기능)
-        # 'created_at' 필드를 기준으로 최신순으로 정렬.
+        filters = {}
         if user_id:
-            videos_from_db = Video.objects.filter(user_id=user_id).order_by('-created_at')
-        else:
-            videos_from_db = Video.objects.all().order_by('-created_at')
+            filters['user_id'] = user_id
+        if is_combined is not None: # is_combined가 명시적으로 설정된 경우에만 필터링
+            filters['is_combined'] = is_combined
+
+        videos_from_db = Video.objects.filter(**filters).order_by('-created_at')
 
         videos_data = []
-        # 조회된 각 비디오 객체에 대해 정보를 추출하고 서명된 URL 조회.
         for video in videos_from_db:
             signed_url = generate_signed_url(video.video_uri)
             videos_data.append({
                 "id": video.id, # 비디오의 고유 ID
                 "video_uri": video.video_uri, # GCS에 저장된 비디오의 URI
-                "signed_url": signed_url,   # 실제 영상 조회 가능한 HTTP URL
-                "prompt": video.prompt, # 비디오 생성에 사용된 프롬프트
-                "title": video.title, # 비디오 제목
-                "user_id": video.user.id if video.user else None, # 비디오를 생성한 사용자 ID
-                # "username": video.user.username if video.user else None, # 비디오를 생성한 사용자명
-                "created_at": video.created_at.isoformat(), # 비디오 생성 시간
+                "signed_url": signed_url,  # 실제 영상 조회 가능한 HTTP URL
+                "prompt": video.prompt,
+                "title": video.title,
+                "user_id": video.user_id,
+                "created_at": video.created_at.isoformat(),
+                "is_combined": video.is_combined, # is_combined 필드 추가
+
             })
         return videos_data
     except Exception as e:
-        # 오류 발생 시 예외처리
         print(f"Error listing videos: {traceback.format_exc()}")
         raise

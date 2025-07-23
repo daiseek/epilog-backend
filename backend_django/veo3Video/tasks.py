@@ -223,6 +223,7 @@ def combine_videos_task(self, results, output_title, user_id=None, character_id=
             title=output_title,
             user_id=user_id,
             character_id=character_id,
+            is_combined=True, # 병합된 영상임을 표시
             # 기타 필요한 필드 추가
         )
         print(f"Combined video metadata saved to DB: {output_title}")
