@@ -56,12 +56,10 @@ SWAGGER_EXEMPT_URLS = [
     '/users/signup/',    # JWT 회원가입 API
     '/users/token/refresh/', # JWT 토큰 갱신 API
     # 다른 API들은 JWT 인증 필요
-    '/books/',           # books 관련 url은 통과
-    '/characters/',      # characters 관련 url은 통과 (오타 수정)
-    '/narration/',       # narration 관련 url은 통과
-    '/videos/',          # videos 관련 url은 통과
-    '/videos2/',         # videos2 관련 url은 통과
-    '/voe3Video/',       # voe3Video 관련 url은 통과
+    # '/books/',           # books 관련 url은 통과
+    # '/characters/',      # characters 관련 url은 통과 (오타 수정)
+    # '/narration/',       # narration 관련 url은 통과
+    # '/veo3Video/',       # voe3Video 관련 url은 통과
 ]
 
 # 로그인 URL 설정 (JWT 환경에서는 불필요)

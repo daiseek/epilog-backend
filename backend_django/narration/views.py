@@ -40,13 +40,13 @@ class GenerateVoiceAPIView(APIView):
         }
         """
         try:
-            print(f"🎤 인증된 사용자 {request.user.username}이 음성 생성 요청")
+            # print(f"🎤 인증된 사용자 {request.user.username}이 음성 생성 요청")
             
             # 요청 데이터 추출
             character_id = request.data.get("characterId")
             lines = request.data.get("lines", [])
             
-            print(f"🧪 [테스트 API] 요청 받음 - Character ID: {character_id}, Lines: {len(lines)}개")
+            # print(f"🧪 [테스트 API] 요청 받음 - Character ID: {character_id}, Lines: {len(lines)}개")
             
             # 기본 입력 검증 (상세 검증은 서비스 함수에서)
             if not character_id:
@@ -56,9 +56,9 @@ class GenerateVoiceAPIView(APIView):
                 return Response({"error": "lines는 필수입니다."}, status=400)
             
             # 나레이션 서비스 함수 호출
-            print(f"🔧 [테스트 API] generate_narration_for_character() 호출 시작")
+            # print(f"🔧 [테스트 API] generate_narration_for_character() 호출 시작")
             audio_results = generate_narration_for_character(character_id, lines)
-            print(f"✅ [테스트 API] 나레이션 생성 완료: {len(audio_results)}개")
+            # print(f"✅ [테스트 API] 나레이션 생성 완료: {len(audio_results)}개")
             
             # API 응답 형식에 맞게 변환
             return Response({

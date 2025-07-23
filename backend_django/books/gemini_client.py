@@ -39,7 +39,7 @@ def summarize_with_gemini(text: str) -> str:
         response = model.generate_content(prompt)
         
         summary = response.text.strip()
-        print("📚 책 요약 Gemini 응답:\n", summary)
+        # print("📚 책 요약 Gemini 응답:\n", summary)
         
         return summary
         
