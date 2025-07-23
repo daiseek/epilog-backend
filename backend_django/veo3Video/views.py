@@ -8,8 +8,10 @@ from .models import Video
 from .serializers import VideoSerializer
 from .veo_service import list_videos
 from .tasks import create_video_for_scene, combine_videos_task
+# veo3Vdideo/views.py : 컨트롤러.
+# HTTP 상태 코드 반환에만 집중, 별도의 서비스 로직은 veo_servied.py에 분리. 또한 비동기 처리는 tasks.py에 일임
 
-# ScriptCacheView 추가
+# 클라이언트로부터 받은 스크립트 데이터를 Redis 캐시에 저장
 class ScriptCacheView(APIView):
     def post(self, request, *args, **kwargs):
         script_id = request.data.get("script_id")
@@ -28,7 +30,7 @@ class ScriptCacheView(APIView):
 
         return Response({"message": "Script cached successfully.", "script_id": script_id}, status=status.HTTP_200_OK)
 
-
+# 캐시된 스크립트 ID를 받아, 각 장면에 대한 비디오 생성
 class VideoGenerationFromScriptView(APIView):
     def post(self, request, script_id, *args, **kwargs):
         script_cache = caches['script_cache']
@@ -90,20 +92,15 @@ class TextToVideoView(APIView):
 # GET 요청을 처리하여 데이터베이스에 저장된 비디오 목록을 반환합니다。
 class VideoListView(APIView):
     def get(self, request, *args, **kwargs):
-        # [JWT 통합 예정] 여기에 JWT 방식으로 사용자 ID를 받아오는 기능 개발
-        # 현재는 user_id를 None으로 설정하여 모든 비디오를 조회합니다。
-        # 실제 구현 시에는 request.user.id 또는 JWT 토큰에서 사용자 ID를 추출하여 사용합니다。
-        user_id = None
+        # JWT 방식으로 사용자 ID를 가져옵니다.
+        # request.user는 IsAuthenticated 권한 클래스에 의해 인증된 사용자 객체입니다.
+        user_id = request.user.id if request.user.is_authenticated else None
 
         try:
-            # veo_service.py의 list_videos 함수를 호출하여 비디오 목록을 조회합니다。
-            # user_id가 전달되면 해당 사용자의 비디오만 필터링됩니다。
-            videos = list_videos(user_id=user_id)
-            # 비디오 목록 조회가 성공하면 200 OK 응답과 함께 목록을 반환합니다。
+            # user_id와 is_combined=True 필터를 사용하여 병합된 비디오 목록을 조회합니다。
+            videos = list_videos(user_id=user_id, is_combined=True)
             return Response(videos, status=status.HTTP_200_OK)
         except Exception as e:
-            # 비디오 목록 조회 중 오류가 발생하면 500 Internal Server Error 응답을 반환합니다。
-            # 오류 메시지는 클라이언트에게 전달됩니다。
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -203,7 +200,7 @@ class FullStoryGenerationView(APIView):
         except Character.DoesNotExist:
             return Response({"error": f"Character with id {character_id} not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        # 각 장면에 대한 비디오 생성 태스크 리스트를 준비
+        # 각 장면에 대한 비디오 생성 태스크 리스트를 준비(각scene에 rewriting_prompt, sceneId, lines를 추출)
         # 이 태스크들은 Celery chord의 '헤더' 부분으로, 병렬로 실행됩니다.
         scene_tasks = []
         for scene in scenes:
@@ -213,6 +210,7 @@ class FullStoryGenerationView(APIView):
             lines = scene.get('lines', []) # 나레이션 생성을 위한 대사 데이터
 
             # 프롬프트가 있는 장면에 대해서만 비디오 생성 태스크를 추가
+            # .s 메소드는 Celery 태스크로 등록하는 메소드로, `create_video_for_scene` 함수를 직접 실행하는 것이 아님
             if prompt:
                 scene_tasks.append(
                     create_video_for_scene.s(character_id=character_id, prompt=prompt, title=title, lines=lines)
@@ -236,6 +234,8 @@ class FullStoryGenerationView(APIView):
         )
         
         # chord 실행: scene_tasks를 병렬로 실행하고, 모든 결과가 반환되면 callback 태스크를 실행합니다.
+        # chord는 scene_tasks 리스트에 있는 모든 태스크를 병렬로 실행하도록 지시하고, 이 모든 태스크가 성공적으로 완료되면
+        # 그 결과들을 callback 태스크로 전달하여 실행하도록 예약
         chord(scene_tasks)(callback)
 
         return Response({"message": "Full story video generation process has been successfully initiated."}, status=status.HTTP_202_ACCEPTED)

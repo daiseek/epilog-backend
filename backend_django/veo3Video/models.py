@@ -32,6 +32,7 @@ class Video(models.Model):
 
     thumbnail_url = models.URLField(null=True, blank=True)  # thumnail_url
     narration_audio_url = models.URLField(null=True, blank=True, verbose_name="Narration Audio URL") # 나레이션 오디오 URL
+    is_combined = models.BooleanField(default=False, verbose_name="Is Combined Video") # 병합된 영상 여부
 
     # Meta 클래스: 모델의 메타데이터 옵션을 정의합니다.
     class Meta:

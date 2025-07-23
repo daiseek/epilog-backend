@@ -1,7 +1,8 @@
 from rest_framework import serializers
 from .models import Video
-
+# veo3Video/serializers.py : 데이터 변환 계층
 # ModelSerializer는 Meta 클래스에 정의된 model (여기서는 Video 모델)을 기반으로 필드를 자동으로 생성
+# 즉, Video모델의 필드들을 정의 Video 객체를 JSON으로 변환하거나 JSON 데이터를 Video객체로 생성/업데이트 할 때 사용
 class VideoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Video
