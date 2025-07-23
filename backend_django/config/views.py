@@ -14,18 +14,18 @@ def index(request):
         "message": "EpiLog API Server",
         "version": "v1.0",
         "auth_method": "JWT",
-        "endpoints": {
-            "auth": {
-                "signup": "/users/signup/",
-                "login": "/users/login/",
-                "refresh": "/users/token/refresh/",
-                "me": "/users/me/"
-            },
-            "docs": {
-                "swagger": "/swagger/",
-                "redoc": "/redoc/"
-            }
-        }
+        # "endpoints": {
+            # "auth": {
+                # "signup": "/users/signup/",
+                # "login": "/users/login/",
+                # "refresh": "/users/token/refresh/",
+                # "me": "/users/me/"
+            # },
+            # "docs": {
+                # "swagger": "/swagger/",
+                # "redoc": "/redoc/"
+            # }
+        # }
     })
 
 # 기존 세션 기반 리다이렉트 (주석처리)

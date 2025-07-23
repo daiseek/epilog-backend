@@ -63,7 +63,7 @@ def generate_narration_for_character(character_id: int, lines: List[Dict[str, An
     # Voice ID 선택
     try:
         voice_id = get_voice_id(gender, age)
-        print(f"🔊 [나레이션 생성] 선택된 음성 ID: {voice_id}")
+        # print(f"🔊 [나레이션 생성] 선택된 음성 ID: {voice_id}")
     except Exception as e:
         raise ValueError(f"음성 선택 실패: {str(e)}")
     
@@ -90,7 +90,7 @@ def generate_narration_for_character(character_id: int, lines: List[Dict[str, An
         if not text:
             raise ValueError(f"{idx + 1}번째 대사: 빈 텍스트는 처리할 수 없습니다.")
         
-        print(f"🎤 [나레이션 생성] {idx + 1}/{len(lines)}: {text[:50]}...")
+        # print(f"🎤 [나레이션 생성] {idx + 1}/{len(lines)}: {text[:50]}...")
         
         try:
             # TTS 생성
@@ -108,12 +108,12 @@ def generate_narration_for_character(character_id: int, lines: List[Dict[str, An
                 "audioUrl": audio_url
             })
             
-            print(f"✅ [나레이션 생성] {idx + 1}번째 완료: {audio_url}")
+            # print(f"✅ [나레이션 생성] {idx + 1}번째 완료: {audio_url}")
             
         except Exception as e:
             error_msg = f"{idx + 1}번째 대사 처리 중 오류 발생: {str(e)}"
-            print(f"❌ [나레이션 생성] {error_msg}")
+            # print(f"❌ [나레이션 생성] {error_msg}")
             raise Exception(error_msg)
     
-    print(f"🎉 [나레이션 생성] 완료: 총 {len(audio_results)}개 파일 생성")
+    # print(f"🎉 [나레이션 생성] 완료: 총 {len(audio_results)}개 파일 생성")
     return audio_results 

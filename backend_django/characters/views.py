@@ -54,7 +54,7 @@ class CharacterConditionalCreateOrListView(APIView):
         tags=['캐릭터 관리']
     )
     def post(self, request, book_id):
-        print(f"🎭 인증된 사용자 {request.user.username}이 책 ID {book_id}의 캐릭터 조회/생성 요청")
+        # print(f"🎭 인증된 사용자 {request.user.username}이 책 ID {book_id}의 캐릭터 조회/생성 요청")
         
         try:
             book = Book.objects.get(id=book_id)
@@ -63,7 +63,7 @@ class CharacterConditionalCreateOrListView(APIView):
 
         existing_characters = Character.objects.filter(book=book, is_deleted=False)
         if existing_characters.exists():
-            print(f"✅ 기존 캐릭터 {existing_characters.count()}개 발견, 목록 반환")
+            # print(f"✅ 기존 캐릭터 {existing_characters.count()}개 발견, 목록 반환")
             data = []
             for character in existing_characters:
                 # 기존 캐릭터의 장면 정보도 함께 조회
@@ -90,7 +90,7 @@ class CharacterConditionalCreateOrListView(APIView):
             return Response(data, status=200)
 
         # Gemini API 호출로 캐릭터 생성 (새로운 방식)
-        print(f"🤖 캐릭터가 없어서 Gemini API로 새로 생성 시작")
+        # print(f"🤖 캐릭터가 없어서 Gemini API로 새로 생성 시작")
         try:
             character_data_list = generate_characters_with_gemini(book_id)
         except Exception as e:
@@ -144,7 +144,7 @@ class CharacterConditionalCreateOrListView(APIView):
                 print(f"⚠️ 캐릭터 또는 장면 저장 실패: {e}")
                 continue
 
-        print(f"✅ 새로운 캐릭터 {len(created_characters)}개 생성 완료")
+        # print(f"✅ 새로운 캐릭터 {len(created_characters)}개 생성 완료")
         return Response(created_characters, status=201)
 
 
@@ -180,7 +180,7 @@ class ScriptGenerateView(APIView):
         tags=['대본 생성']
     )
     def post(self, request, character_id):
-        print(f"📝 인증된 사용자 {request.user.username}이 캐릭터 ID {character_id}의 대본 생성 요청")
+        # print(f"📝 인증된 사용자 {request.user.username}이 캐릭터 ID {character_id}의 대본 생성 요청")
         
         try:
             character = Character.objects.get(id=character_id, is_deleted=False)
@@ -188,7 +188,7 @@ class ScriptGenerateView(APIView):
             return Response({'error': 'Character not found'}, status=404)
 
         # 장면 개수 결정
-        desc_length = len(character.characterDescription)
+        # desc_length = len(character.characterDescription)
         scene_count = 3
 
         # 조연 캐릭터 정보 수집
@@ -197,7 +197,7 @@ class ScriptGenerateView(APIView):
         ).exclude(id=character.id)
 
         # Gemini 호출
-        print(f"🤖 Gemini API로 대본 생성 시작 - 주인공: {character.characterName}")
+        # print(f"🤖 Gemini API로 대본 생성 시작 - 주인공: {character.characterName}")
         try:
             raw_text = generate_scenes_with_gemini(
                 main_character=character,
@@ -242,9 +242,9 @@ class ScriptGenerateView(APIView):
             script_cache.set(cache_key, {
                 "characterId": character_id,
                 "scenes": generated_scenes
-            }, timeout=1000)
+            }, timeout=2000) # 2000초 동안 캐시
 
-            print(f"✅ 대본 생성 및 캐싱 완료 - Script ID: {script_id}")
+            # print(f"✅ 대본 생성 및 캐싱 완료 - Script ID: {script_id}")
 
             return Response({
                 "script_id": script_id,

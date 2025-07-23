@@ -120,7 +120,7 @@ JSON 형식 규칙:
         ])
         
         raw_text = response.text
-        print("🧠 캐릭터 생성 Gemini 응답:\n", raw_text)
+        # print("🧠 캐릭터 생성 Gemini 응답:\n", raw_text)
         
         # 응답 파싱
         character_data = parse_character_list(raw_text)
@@ -153,20 +153,20 @@ def clean_gemini_response(text):
 # 캐릭터 데이터 파싱 (배열 형태)
 def parse_character_list(raw_text):
     try:
-        print(f"📥 캐릭터 raw_text (type: {type(raw_text)}):", repr(raw_text)[:500] + "..." if len(str(raw_text)) > 500 else repr(raw_text))
+        # print(f"📥 캐릭터 raw_text (type: {type(raw_text)}):", repr(raw_text)[:500] + "..." if len(str(raw_text)) > 500 else repr(raw_text))
         
         # 이미 파싱된 데이터인지 확인
         if isinstance(raw_text, list):
-            print("✅ 이미 파싱된 캐릭터 리스트입니다.")
+            # print("✅ 이미 파싱된 캐릭터 리스트입니다.")
             return raw_text
         elif isinstance(raw_text, dict):
-            print("✅ 이미 파싱된 딕셔너리입니다.")
+            # print("✅ 이미 파싱된 딕셔너리입니다.")
             return raw_text.get('characters', raw_text)
         
         # 문자열인 경우 정상적으로 파싱
         cleaned = clean_gemini_response(raw_text)
-        print("🧼 캐릭터 cleaned (처음 1000자):", cleaned[:1000])
-        print("🧼 캐릭터 cleaned (전체 길이):", len(cleaned))
+        # print("🧼 캐릭터 cleaned (처음 1000자):", cleaned[:1000])
+        # print("🧼 캐릭터 cleaned (전체 길이):", len(cleaned))
         
         # JSON 파싱 시도
         try:
@@ -174,7 +174,7 @@ def parse_character_list(raw_text):
         except json.JSONDecodeError as json_error:
             print(f"❌ JSON 파싱 실패! 오류 위치: line {json_error.lineno}, column {json_error.colno}")
             print(f"❌ 오류 메시지: {json_error.msg}")
-            print(f"❌ 문제가 있는 부분 (오류 위치 ±50자):")
+            # print(f"❌ 문제가 있는 부분 (오류 위치 ±50자):")
             
             error_pos = json_error.pos if hasattr(json_error, 'pos') else 0
             start_pos = max(0, error_pos - 50)
@@ -183,10 +183,10 @@ def parse_character_list(raw_text):
             print(f"   '{problem_section}'")
             
             # 수정 시도 - 일반적인 JSON 오류들 자동 수정
-            print("🔧 JSON 자동 수정 시도...")
+            # print("🔧 JSON 자동 수정 시도...")
             fixed_json = auto_fix_json(cleaned)
             if fixed_json != cleaned:
-                print("✅ JSON 수정 완료, 재시도...")
+                # print("✅ JSON 수정 완료, 재시도...")
                 parsed = json.loads(fixed_json)
             else:
                 raise json_error
@@ -199,7 +199,7 @@ def parse_character_list(raw_text):
             else:
                 raise ValueError(f"Expected character array but got: {type(parsed)}")
         
-        print(f"✅ 파싱된 캐릭터 {len(parsed)}개")
+        # print(f"✅ 파싱된 캐릭터 {len(parsed)}개")
         
         # 각 캐릭터 데이터 검증
         for i, char in enumerate(parsed):
@@ -216,15 +216,15 @@ def parse_character_list(raw_text):
         
     except json.JSONDecodeError as e:
         print("⚠️ 캐릭터 JSON 디코딩 실패:", e)
-        print("🧠 최종 파싱 대상 (처음 500자):", cleaned[:500] if 'cleaned' in locals() else str(raw_text)[:500])
+        # print("🧠 최종 파싱 대상 (처음 500자):", cleaned[:500] if 'cleaned' in locals() else str(raw_text)[:500])
         raise
     except ValueError as ve:
         print("⚠️ 캐릭터 파싱 실패:", ve)
-        print("🧠 최종 파싱 대상 (처음 500자):", cleaned[:500] if 'cleaned' in locals() else str(raw_text)[:500])
+        # print("🧠 최종 파싱 대상 (처음 500자):", cleaned[:500] if 'cleaned' in locals() else str(raw_text)[:500])
         raise
     except Exception as e:
         print(f"⚠️ 예상치 못한 오류: {type(e).__name__}: {e}")
-        print("🧠 최종 파싱 대상 (처음 500자):", cleaned[:500] if 'cleaned' in locals() else str(raw_text)[:500])
+        # print("🧠 최종 파싱 대상 (처음 500자):", cleaned[:500] if 'cleaned' in locals() else str(raw_text)[:500])
         raise
 
 def auto_fix_json(json_str):
@@ -383,7 +383,7 @@ rewriting_prompt 좋은 예시:
         # Gemini API 호출
         response = model.generate_content(prompt)
         raw_text = response.text
-        print("🧠 대본 생성 Gemini 응답:\n", raw_text)
+        # print("🧠 대본 생성 Gemini 응답:\n", raw_text)
         
         # 응답 파싱
         return parse_scene_list(raw_text)
@@ -397,21 +397,21 @@ def parse_scene_list(raw_text):
     Gemini API 응답을 파싱하여 대본 데이터로 변환
     """
     try:
-        print(f"📥 씬 raw_text (type: {type(raw_text)}):", repr(raw_text)[:200] + "..." if len(str(raw_text)) > 200 else repr(raw_text))
+        # print(f"📥 씬 raw_text (type: {type(raw_text)}):", repr(raw_text)[:200] + "..." if len(str(raw_text)) > 200 else repr(raw_text))
         
         # 이미 파싱된 데이터인지 확인
         if isinstance(raw_text, list):
-            print("✅ 이미 파싱된 씬 리스트입니다.")
+            # print("✅ 이미 파싱된 씬 리스트입니다.")
             scenes = raw_text
             script_id = f"scpt-{uuid.uuid4().hex[:8]}"
         elif isinstance(raw_text, dict):
-            print("✅ 이미 파싱된 딕셔너리입니다.")
+            # print("✅ 이미 파싱된 딕셔너리입니다.")
             scenes = raw_text.get("scenes", [])
             script_id = raw_text.get("script_id", f"scpt-{uuid.uuid4().hex[:8]}")
         else:
             # 문자열인 경우 정상적으로 파싱
             cleaned = clean_gemini_response(raw_text)
-            print("🧼 씬 cleaned:", cleaned[:200] + "..." if len(cleaned) > 200 else cleaned)
+            # print("🧼 씬 cleaned:", cleaned[:200] + "..." if len(cleaned) > 200 else cleaned)
 
             parsed = json.loads(cleaned)
             
@@ -436,11 +436,11 @@ def parse_scene_list(raw_text):
             if "rewriting_prompt" in scene:
                 rewriting_prompt = scene["rewriting_prompt"]
                 if len(rewriting_prompt) > 1000:
-                    print(f"⚠️ 장면 {idx + 1} rewriting_prompt가 너무 깁니다 ({len(rewriting_prompt)}자). 900자로 단축합니다.")
+                    # print(f"⚠️ 장면 {idx + 1} rewriting_prompt가 너무 깁니다 ({len(rewriting_prompt)}자). 900자로 단축합니다.")
                     scene["rewriting_prompt"] = rewriting_prompt[:900].rsplit(' ', 1)[0] + "."
-                    print(f"✅ 단축 완료: {len(scene['rewriting_prompt'])}자")
-                elif len(rewriting_prompt) < 200:
-                    print(f"⚠️ 장면 {idx + 1} rewriting_prompt가 너무 짧습니다 ({len(rewriting_prompt)}자).")
+                    # print(f"✅ 단축 완료: {len(scene['rewriting_prompt'])}자")
+                # elif len(rewriting_prompt) < 200:
+                #     print(f"⚠️ 장면 {idx + 1} rewriting_prompt가 너무 짧습니다 ({len(rewriting_prompt)}자).")
 
         # 표준 형식으로 반환 (배열이든 객체든 동일한 형식)
         return {
@@ -450,9 +450,9 @@ def parse_scene_list(raw_text):
 
     except json.JSONDecodeError as e:
         print("⚠️ 씬 JSON 디코딩 실패:", e)
-        print("🧠 최종 파싱 대상:", cleaned if 'cleaned' in locals() else raw_text)
+        # print("🧠 최종 파싱 대상:", cleaned if 'cleaned' in locals() else raw_text)
         raise
     except ValueError as ve:
         print("⚠️ 씬 파싱 실패:", ve)
-        print("🧠 최종 파싱 대상:", cleaned if 'cleaned' in locals() else raw_text)
+        # print("🧠 최종 파싱 대상:", cleaned if 'cleaned' in locals() else raw_text)
         raise
