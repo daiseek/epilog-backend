@@ -41,7 +41,7 @@ def extract_text_from_pdf(file) -> str:
         # OCR 처리 시도 (이미지 기반 PDF)
         try:
             file.seek(0)
-            images = convert_from_bytes(file.read())
+            images = convert_from_bytes(pdf_data)
             ocr_text = ""
             
             for i, image in enumerate(images):
