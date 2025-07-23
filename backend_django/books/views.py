@@ -99,19 +99,19 @@ class BookFromPdfView(APIView):
         tags=['책 관리']
     )
     def post(self, request):
-        print("📝 PDF 업로드 요청 데이터:", request.data)
-        print("👤 요청 사용자:", request.user.username if request.user.is_authenticated else "익명")
-        print("📁 파일 목록:", request.FILES)
-        print("🔍 요청 헤더 Content-Type:", request.content_type)
-        print("🔍 요청 메소드:", request.method)
+        # print("📝 PDF 업로드 요청 데이터:", request.data)
+        # print("👤 요청 사용자:", request.user.username if request.user.is_authenticated else "익명")
+        # print("📁 파일 목록:", request.FILES)
+        # print("🔍 요청 헤더 Content-Type:", request.content_type)
+        # print("🔍 요청 메소드:", request.method)
 
         # 파일 업로드 상세 디버깅
         if 'pdf' in request.FILES:
             pdf_file = request.FILES['pdf']
-            print(f"✅ PDF 파일 감지: {pdf_file.name}, 크기: {pdf_file.size} bytes")
-        else:
-            print("❌ PDF 파일이 request.FILES에 없습니다.")
-            print("🔍 사용 가능한 키들:", list(request.FILES.keys()))
+            # print(f"✅ PDF 파일 감지: {pdf_file.name}, 크기: {pdf_file.size} bytes")
+        # else:
+            # print("❌ PDF 파일이 request.FILES에 없습니다.")
+            # print("🔍 사용 가능한 키들:", list(request.FILES.keys()))
 
         serializer = BookPdfUploadSerializer(data=request.data)
         if not serializer.is_valid():
@@ -130,29 +130,29 @@ class BookFromPdfView(APIView):
 
         try:
             # 1. PDF 텍스트 추출
-            print("📖 PDF 텍스트 추출 시작...")
+            # print("📖 PDF 텍스트 추출 시작...")
             extracted_text = extract_text_from_pdf(pdf_file)
-            print(f"📄 추출된 텍스트 길이: {len(extracted_text)} 문자")
+            # print(f"📄 추출된 텍스트 길이: {len(extracted_text)} 문자")
 
             # 2. Gemini 요약
-            print("🤖 Gemini API 요약 시작...")
+            # print("🤖 Gemini API 요약 시작...")
             summary = summarize_with_gemini(extracted_text)
-            print(f"📝 요약 완료: {len(summary)} 문자")
+            # print(f"📝 요약 완료: {len(summary)} 문자")
 
             # 3. S3 업로드 => pdf_URL을 얻어냄
-            print("☁️ S3 업로드 시작...")
+            # print("☁️ S3 업로드 시작...")
             pdf_file.seek(0)
             pdf_url = upload_to_s3(pdf_file)
-            print(f"🔗 S3 업로드 완료: {pdf_url}")
+            # print(f"🔗 S3 업로드 완료: {pdf_url}")
 
             # 4. DB 저장 (user 외래키 없음)
-            print("💾 DB 저장 시작...")
+            # print("💾 DB 저장 시작...")
             book = Book.objects.create(
                 title=title,
                 content=summary,
                 pdf_url=pdf_url
             )
-            print(f"✅ 책 생성 완료 - ID: {book.id}")
+            # print(f"✅ 책 생성 완료 - ID: {book.id}")
 
             return Response({
                 "book_id": book.id,
@@ -190,7 +190,7 @@ class BookOfficialView(APIView):
         # 삭제되지 않은 모든 책 조회 (사용자별 필터링 없음)
         books = Book.objects.filter(is_deleted=False).only('id', 'title', 'content')
         
-        print(f"📚 인증된 사용자 {request.user.username}이 책 {books.count()}개 조회")
+        # print(f"📚 인증된 사용자 {request.user.username}이 책 {books.count()}개 조회")
 
         # 응답 데이터 직렬화
         response_serializer = BookOfficialResponseSerializer(books, many=True)
@@ -223,7 +223,7 @@ class BookVideosView(APIView):
             # 책 존재 여부 확인 (사용자별 필터링 없음)
             book = Book.objects.get(id=book_id, is_deleted=False)
             
-            print(f"📚 인증된 사용자 {request.user.username}이 책 '{book.title}' 비디오 조회")
+            # print(f"📚 인증된 사용자 {request.user.username}이 책 '{book.title}' 비디오 조회")
 
             # 해당 책의 캐릭터들 조회
             characters = book.characters.filter(is_deleted=False)
@@ -273,7 +273,7 @@ class BookCharactersView(APIView):
             # 책 존재 여부 확인 (사용자별 필터링 없음)
             book = Book.objects.get(id=book_id, is_deleted=False)
 
-            print(f"📚 인증된 사용자 {request.user.username}이 책 '{book.title}' 캐릭터 조회")
+            # print(f"📚 인증된 사용자 {request.user.username}이 책 '{book.title}' 캐릭터 조회")
 
             # 해당 책의 캐릭터들 조회
             characters = book.characters.filter(is_deleted=False)
