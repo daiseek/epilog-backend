@@ -100,7 +100,8 @@ class BookFromPdfView(APIView):
             401: openapi.Response(description="인증 필요"),
             500: BookErrorResponseSerializer
         },
-        tags=['책 관리']
+        tags=['책 관리'],
+        consumes=['multipart/form-data']
     )
     def post(self, request):
         print("📝 비동기 PDF 업로드 요청 시작")

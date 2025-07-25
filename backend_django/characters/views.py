@@ -261,15 +261,16 @@ class ScriptGenerateAsyncView(APIView):
         - 404: 캐릭터를 찾을 수 없음
         - 500: 초기 처리 실패
         """,
-        manual_parameters=[
-            openapi.Parameter(
-                'scene_count',
-                openapi.IN_FORM,
-                description="생성할 장면 수 (기본값: 3)",
-                type=openapi.TYPE_INTEGER,
-                required=False
-            ),
-        ],
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'scene_count': openapi.Schema(
+                    type=openapi.TYPE_INTEGER,
+                    description="생성할 장면 수 (기본값: 3)",
+                    default=3
+                )
+            }
+        ),
         responses={
             202: ScriptAsyncResponseSerializer,
             401: openapi.Response(description="인증 필요"),
