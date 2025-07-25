@@ -1,10 +1,11 @@
 from django.urls import path
-from .views import BookTextUploadView, BookFromPdfView, BookOfficialView, BookVideosView, BookCharactersView
+from .views import BookTextUploadView, BookFromPdfView, BookOfficialView, BookVideosView, BookCharactersView, BookStatusView
 
 urlpatterns = [
     path('text', BookTextUploadView.as_view()),
     path('pdf', BookFromPdfView.as_view()),
     path('official', BookOfficialView.as_view()),
     path('<int:book_id>/videos', BookVideosView.as_view()),
-    path('<int:book_id>/characters', BookCharactersView.as_view()), 
+    path('<int:book_id>/characters', BookCharactersView.as_view()),
+    path('<int:book_id>/status', BookStatusView.as_view()),  # 처리 상태 확인 API
 ]
