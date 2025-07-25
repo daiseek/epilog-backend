@@ -580,7 +580,7 @@ def parse_scene_list(raw_text):
             if "rewriting_prompt" in scene:
                 rewriting_prompt = scene["rewriting_prompt"]
                 if len(rewriting_prompt) > 3000:
-                    print(f"⚠️ 장면 {idx + 1} rewriting_prompt가 너무 깁니다 ({len(rewriting_prompt)}자). 900자로 단축합니다.")
+                    print(f"⚠️ 장면 {idx + 1} rewriting_prompt가 너무 깁니다 ({len(rewriting_prompt)}자). 2900자로 단축합니다.")
                     scene["rewriting_prompt"] = rewriting_prompt[:2900].rsplit(' ', 1)[0] + "."
                     print(f"✅ 단축 완료: {len(scene['rewriting_prompt'])}자")
                 elif len(rewriting_prompt) < 200:
