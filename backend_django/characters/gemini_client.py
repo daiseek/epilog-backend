@@ -94,20 +94,20 @@ JSON 형식 규칙:
 - 정확히 다음 형식으로만 출력:
 
 [
-  {
+  {{
     "characterName": "홍길동",
     "isMain": true,
     "age": 25,
     "gender": "남성",
     "characterDescription": "의적으로 활동하며 백성들을 도와주는 정의로운 인물",
     "scenes": [
-      {
+      {{
         "scene_content": "홍길동이 어둠 속에서 탐관오리의 저택에 침입하는 장면이다. 달빛이 희미하게 비치는 가운데, 그는 검은 의복을 입고 담장을 넘어든다. 저택 안에서는 탐관오리가 백성들의 세금을 횡령하며 호화로운 잔치를 벌이고 있다. 홍길동은 조용히 기와지붕 위를 이동하며 창문 너머로 그 광경을 지켜본다. 그의 눈빛에는 분노와 정의감이 타오르고 있다. 마침내 적절한 순간을 포착한 그는 창문을 열고 방 안으로 뛰어든다. '탐관오리여, 네 죄를 알겠느냐!' 홍길동의 외침이 저택 전체에 울려 퍼지며, 놀란 탐관오리와 하인들이 벌벌 떨기 시작한다.",
         "start_page": 15,
         "finish_page": 18
-      }
+      }}
     ]
-  }
+  }}
 ]
 
 ⚠️ JSON 형식 중요사항:
@@ -347,86 +347,187 @@ def generate_scenes_with_gemini(main_character, sub_characters, scene_count):
         
         # 프롬프트 구성
         prompt = f"""
-다음 소설 정보를 바탕으로 {scene_count}개의 연속적이고 일관된 스토리 장면을 생성해주세요.
+Please create {str(scene_count)} continuous and consistent story scenes based on the following novel information.
 
-[소설 정보]
-제목: {book_title}
-내용: {book_content}
+[info novel]
+title: {str(book_title)}
+content: {str(book_content[:5000])}
 
-[주인공]
-이름: {main_name}
-나이: {age}
-성별: {gender}
-설명: {description}
+[Main character]
+name: {str(main_name)}
+age: {str(age)}
+gender: {str(gender)}
+description: {str(description)}
 
-[조연 캐릭터들]
-{sub_info}
+[Sub characters]
+{str(sub_info)}
 
-{scene_context}
+{str(scene_context)}
 
-요구사항:
-- {scene_count}개의 장면은 연속적이고 일관된 스토리를 형성해야 합니다 (시작 → 중간 → 끝).
-    - 각 장면은 8초 영상으로 만들어지며, 총 3개 만들어집니다. 세 영상을 이어붙였을때 스토리텔링이 되어야합니다.
-- 위에 제공된 주인공 등장 장면들의 맥락과 분위기를 반영해주세요.
-- 주인공의 성격, 행동 양식, 말투 등이 기존 장면과 일치하도록 해주세요.
-- 독립적이거나 연결되지 않은 장면을 생성하지 마세요.
-- 각 장면은 이전 장면을 논리적으로 이어받아야 합니다.
-- 캐릭터의 감정과 행동이 장면 간에 자연스럽게 발전해야 합니다.
-- 대화와 캐릭터 행동은 이전 사건과 감정 상태를 반영해야 합니다.
+Requirements:
+Unified Prompt Architecture and Requirements for Sequential Scene Generation
+1.0 Objective
+- The objective of these requirements is to define a Unified Prompt Architecture for generating multiple consecutive scenes (three scenes, 8 seconds each) from a single request. This architecture must ensure perfect visual consistency of characters, style, and mood, and implement a complete, coherent narrative. This is achieved not through interactive system functionality, but through the structural design of the prompt itself.
+2.0 Core Principles
+- {str(scene_count)} scenes must form a continuous and consistent story (start → middle → end).
+- Each scene is made of an 8-second video, with a total of three. It should be storytelling when three videos are joined together.
+- Global Declaration: Core elements common to all scenes (e.g., characters, style, lighting) are to be explicitly declared at the beginning of the prompt to establish a definitive baseline.
+- Consistent Reference: In the scene-by-scene descriptions, the names and details of elements defined in the Global Declaration must be used accurately and consistently to aid the AI's continuity recognition.
+- Sequential Narrative: Each scene must be clearly distinguished and arranged chronologically to construct a natural and logical narrative flow.
 
-장면 형식:
-- sceneId: 1부터 시작하는 순차 번호 (예: 1, 2, 3, ...)
-- background: 장소와 시간에 대한 시각적 설명 (영어)
-- mood: 감정적 분위기 (영어)
-- style: 시각적 스타일 (예: cinematic, anime-style)
-- camera: 카메라 움직임이나 프레이밍 (예: tracking shot, zoom-in)
-- soundtrack: 배경음악과 음향효과 설명 (영어)
-- characters: 1-2명의 캐릭터 리스트 (각각 name, appearance, expression, action을 영어로)
-- lines: 대화 리스트. 각 라인은 다음을 포함:
-  - speaker: 화자 이름
-  - line_en: 영어 대사
-  - line_ko: 한국어 번역 대사
-  - ⚠️중요! 화자는 단 한 명뿐입니다! line_en과 line_ko는 모두 화자의 대사입니다.
-- 장면당 한 명의 캐릭터만 말해야 합니다.
-- 한국어 대사(line_ko)는 3-4초 안에 말할 수 있도록 짧게 (10-15글자 정도).
-- 자연스럽고 간단한 표현을 사용하세요. 길고 복잡한 문장은 피하세요.
-- 실제 사람이 말하는 것처럼 구어체로 만드세요.
-- rewriting_prompt: ⚠️⚠️ 매우 중요 ⚠️⚠️간결하고 핵심적이며 풍부한 영어 문장 (⚠️ 반드시 500~900자 사이).
-  다음 요소들을 포함하되 간결하게 작성:
-  - 장소와 시간 (예: "in a moonlit forest at midnight")
-  - 주인공의 핵심 행동 (예: "character walks cautiously")
-  - 기본 분위기 (예: "tense, mysterious atmosphere")
-  - 카메라 움직임 1개 (예: "close-up shot" 또는 "wide angle")
-  - 배경음 1개 (예: "soft wind sounds")
-  ⚠️ 중요: 긴 설명보다는 핵심 키워드들을 연결한 간결한 문장으로 작성하세요.
+3.0 Storytelling & Continuity Requirements
+All generated scenes must strictly adhere to the following narrative and content requirements:
+- Complete Narrative: The three 8-second videos, when concatenated in order, must form a single, complete mini-story.
+- Contextual and Mood Consistency: The prompt must faithfully reflect the context and mood of the provided examples (i.e., serious, contemplative, with a touch of mystery).
+- Character Consistency: The protagonist's personality (serious, determined), behavioral patterns (intensely focused), and manner of speech must be perfectly consistent with established character traits.
+- Logical Cohesion: The system must not generate isolated or disconnected scenes. Each scene must logically follow and build upon the events and emotional state of the preceding scene.
+- Emotional and Behavioral Progression: A character's emotions and actions should not be static; they must evolve or intensify naturally with the flow of the narrative (e.g., from focus to surprise to realization).
+- Plausible Reactivity: Dialogue and character actions must clearly reflect preceding events and the emotional states resulting from them.
 
-rewriting_prompt 좋은 예시:
-"A young warrior stands in a moonlit forest clearing at midnight, gripping his sword with determination as shadows dance around ancient trees, while soft wind whispers through leaves and an owl hoots in the distance, creating a tense yet mystical atmosphere with a close-up shot capturing his focused expression and the gleaming blade reflecting moonlight."
+4.0 Unified Prompt Structure Requirements
+To successfully implement the storytelling requirements above, the prompt must be composed of the following two main parts:
+Part 1: Preamble / Global Setup:
+This section is located at the very beginning of the prompt and defines the governing rules for all subsequent scenes.
+- 4.1 Master Instruction:
+The prompt must begin with a master instruction that clearly informs the AI of the overall task (e.g., generating three consecutive scenes) and the mandate for consistency.
+Example: "Please generate three consecutive 8-second scenes based on the following global settings and sequential descriptions. Maintain all character and style details consistently across all scenes to create a coherent narrative."
 
-출력 규칙:
-- 순수한 유효한 JSON만 반환하세요. 설명이나 마크다운은 없이.
-- 모든 문자열은 큰따옴표(")로 감싸야 합니다.
-- JSON 구조가 엄격하게 올바라야 합니다.
-- 각 장면은 정확히 1-2명의 캐릭터를 포함해야 합니다. 모든 조연이 모든 장면에 나올 필요는 없습니다.
+- 4.2 [CHARACTERS] Section:
+This section must clearly define all key characters and their unchanging visual traits (e.g., appearance, core attire). This definition will remain constant across all scenes.
+Example1: The Narrator: A pilot in his forties, with a tired but determined expression, wearing worn desert attire.
+Example2: The Little Prince: A small boy with golden hair, wide curious eyes, and wearing a distinct green coat and a small yellow scarf.
 
-각 장면은 다음 키를 가진 JSON 객체여야 합니다:
-- sceneId: 1부터 시작하는 순차 번호
-- background: 문자열
-- mood: 문자열
-- style: 문자열
-- camera: 문자열
-- soundtrack: 문자열
-- characters: 캐릭터 객체 리스트 (name, appearance, expression, action)
-- lines: 대화 객체 리스트 (speaker, line_en, line_ko)
-- rewriting_prompt: 간결하지만 묘사가 풍부한 영어 문장 (500~900자를 엄격하게 준수하세요!)
+- 4.3 [OVERALL_STYLE] Section:
+This section must define the art direction, overall mood, and visual tone that will be applied consistently to all scenes.
+Example: "A consistent Pixar-style animation, with vibrant colors, expressive character designs, and a warm, inviting atmosphere."
 
-장면 배열을 JSON 형태로 반환하세요. 추가 설명이나 마크다운 없이.
+- 4.4 [CORE_LIGHTING] Section:
+This section must define the core lighting scheme that will be maintained consistently across all scenes.
+Example: "Warm, low-angled sunlight of the late afternoon, casting long shadows across the sand."
+
+Part 2: Scene-by-Scene Descriptions:
+(Following the Preamble, the specific descriptions for Scene 1, 2, and 3 are to be written sequentially, adhering to the detailed format defined previously.)
+
+scene format:
+- sceneId: Sequential numbers starting from 1 (e.g. 1, 2, 3, ...)
+- background: Visual Description of Place and Time (English)
+- mood: an emotional atmosphere
+- style: Visual style (e.g., cinematic, anime-style)
+- camera: Camera movement or framing (e.g. tracking shot, zoom-in)
+- soundtrack: Explanation of background music and sound effects (English)
+- characters: List of 1-2 characters (name, appearance, expression, action in English respectively)
+- rewriting_prompt: ⚠️⚠️ Very important ⚠️⚠️ Key and rich English sentence.
+  - Place and time (e.g.: "in a moonlit forest at midnight")
+  - Character's speaking/listening actions and detailed expressions (e.g.: "character speaks with a thoughtful expression, gesturing subtly", "listens intently, nodding slowly")
+  - Camera work suggesting conversation flow (e.g.: "medium shot focusing on their faces", "slow pan between speakers", "close-up capturing a nuanced reaction")
+  - Mood/background implied by the dialogue (e.g.: "hopeful atmosphere as they discuss future plans", "somber mood reflecting a difficult confession")
+  - Add gestures and actions (e.g.: "paces thoughtfully while delivering a monologue", "leans in conspiratorially")
+  - 1 background sound (e.g.: "soft wind sounds", "gentle string music")
+  - Style: Pixar-style animation, ensuring visual consistency across all scenes.
+  ⚠️ Important: Focus on visually enriching scenes with dialogue or monologue at their core, maintaining a consistent Pixar-style animation.
+
+  
+
+Example of scene format:
+{{
+  "sceneId": 1,
+  "background": "The vast Sahara desert at late afternoon, near the wreckage of a small airplane. The sun is low, casting long shadows on the sand.",
+  "mood": "Serious, focused, and filled with a sense of urgency and underlying worry.",
+  "style": "A unique blend of realistic, gritty desert textures and a soft, ethereal hand-drawn aesthetic.",
+  "camera": "A tight close-up shot focusing on the Narrator's hands and his notepad, then slightly widening to capture his face.",
+  "soundtrack": "The sharp, rhythmic scratching of a pencil on paper, accompanied by a faint, low, unsettling desert wind.",
+  "characters": [
+    {{
+      "name": "The Narrator",
+      "appearance": "A pilot in his forties, wearing worn and dusty desert attire.",
+      "expression": "A brow furrowed with intense concentration and deep-seated worry.",
+      "action": "Sketches rapidly and frantically on a notepad, muttering to himself, 'Beware the baobabs. Children must know.'"
+    }},
+    {{
+      "name": "The Little Prince",
+      "appearance": "A small boy with brilliant golden hair, wearing a distinct green coat and a small yellow scarf.",
+      "expression": "A quiet, neutral, and deeply curious gaze.",
+      "action": "Stands nearby, silently observing the Narrator with unwavering attention."
+    }}
+  ],
+  "rewriting_prompt": "A close-up shot focuses on the hands of the Narrator, a pilot in his forties, as he sketches frantically in a notepad amidst airplane wreckage in the Sahara. The low afternoon sun casts long shadows. His expression is one of intense worry as he mutters, 'Beware the baobabs. Children must know.' The only sounds are pencil scratching and a faint, unsettling wind. Nearby, the Little Prince, a small boy with golden hair and a green coat, watches him in silence with a curious gaze. The style is a blend of realistic desert textures and a soft, hand-drawn aesthetic."
+}}
+
+
+{{
+  "sceneId": 2,
+  "background": "The same Sahara desert location, moments after the first scene.",
+  "mood": "The mood shifts from urgent to quiet, gentle, and slightly surreal with the Prince's unexpected request.",
+  "style": "A unique blend of realistic, gritty desert textures and a soft, ethereal hand-drawn aesthetic.",
+  "camera": "A static medium shot that frames both characters, observing their interaction from a neutral distance.",
+  "soundtrack": "The pencil scratching stops abruptly. The soft crunch of sand underfoot is heard, and the desert wind becomes calmer.",
+  "characters": [
+    {{
+      "name": "The Narrator",
+      "appearance": "A pilot in his forties, wearing worn and dusty desert attire.",
+      "expression": "Still focused on his drawing, initially unaware of the boy's approach.",
+      "action": "Pauses his sketching for a moment, sensing a presence."
+    }},
+    {{
+      "name": "The Little Prince",
+      "appearance": "A small boy with brilliant golden hair, wearing a distinct green coat and a small yellow scarf.",
+      "expression": "Calm, innocent, and direct, with a clear sense of purpose.",
+      "action": "Takes a cautious step closer and speaks for the first time, his voice clear and gentle, 'If you please... draw me a sheep.'"
+    }}
+  ],
+  "rewriting_prompt": "A moment later, the camera is a static medium shot. The Little Prince takes a step closer to the Narrator, his boots crunching softly on the sand. The Narrator pauses his sketching. Maintaining the blend of realistic and hand-drawn styles, the Little Prince looks at the Narrator and speaks in a clear, gentle voice, 'If you please... draw me a sheep.' The urgent mood shifts to one of quiet, surreal wonder."
+}}
+
+{{
+  "sceneId": 3,
+  "background": "The same location, focused tightly on the two characters.",
+  "mood": "Stunned silence, pure astonishment, and a moment of disbelief that breaks the desert's lonely tension.",
+  "style": "A unique blend of realistic, gritty desert textures and a soft, ethereal hand-drawn aesthetic.",
+  "camera": "A tight close-up on the Narrator's face to capture his reaction. The camera is perfectly still, with no movement.",
+  "soundtrack": "Almost complete silence. The faint sound of the wind dies down entirely to emphasize the stunned moment.",
+  "characters": [
+    {{
+      "name": "The Narrator",
+      "appearance": "A pilot in his forties, wearing worn and dusty desert attire.",
+      "expression": "Eyes widening in pure astonishment and disbelief. His mouth is slightly agape, completely speechless.",
+      "action": "His hand, holding the pencil, freezes mid-air. He looks up from his notepad and truly SEES the Little Prince for the first time."
+    }},
+    {{
+      "name": "The Little Prince",
+      "appearance": "A small boy with brilliant golden hair, wearing a distinct green coat and a small yellow scarf.",
+      "expression": "A patient, serene, and expectant gaze, as if his request was the most natural thing in the world.",
+      "action": "Stands perfectly still, calmly waiting for the Narrator's response."
+    }}
+  ],
+  "rewriting_prompt": "The camera cuts to a tight close-up of the Narrator's face. His hand freezes. His eyes widen in pure astonishment as he looks up and truly sees the Little Prince for the first time. A stunned silence falls as even the wind seems to hold its breath. The Narrator is speechless, his expression shifting from frantic worry to utter disbelief, while the Little Prince stands patiently, waiting for his sheep."
+}}
+
+Output Rules:
+- Return only pure valid JSON. Without explanation or markdown.
+- All strings must be enclosed in double quotation marks (").
+- JSON structure must be strictly correct.
+- Each scene should contain exactly 1-2 characters. Not all supporting roles need to be in every scene.
+
+Each scene must be a JSON object with the following keys:
+- sceneId: sequential number starting from 1
+- background: string
+- mood: string
+- style: string
+- camera: string
+- soundtrack: string
+- Characters: Character object list (name, application, expression, action)
+- rewriting_prompt: English sentence 
+
+Return the scene arrangement in JSON form. Without further comment or markdown.
 """
+
+
 
         # Gemini API 호출
         response = model.generate_content(prompt)
         raw_text = response.text
         print("🧠 대본 생성 Gemini 응답:\n", raw_text)
+        print(f"DEBUG: Raw Gemini response text: {raw_text[:1000]}...") # Log first 1000 chars for debugging
         
         # 응답 파싱
         return parse_scene_list(raw_text)
@@ -478,9 +579,9 @@ def parse_scene_list(raw_text):
             # rewriting_prompt 길이 검증 및 자동 단축
             if "rewriting_prompt" in scene:
                 rewriting_prompt = scene["rewriting_prompt"]
-                if len(rewriting_prompt) > 1000:
-                    print(f"⚠️ 장면 {idx + 1} rewriting_prompt가 너무 깁니다 ({len(rewriting_prompt)}자). 900자로 단축합니다.")
-                    scene["rewriting_prompt"] = rewriting_prompt[:900].rsplit(' ', 1)[0] + "."
+                if len(rewriting_prompt) > 3000:
+                    print(f"⚠️ 장면 {idx + 1} rewriting_prompt가 너무 깁니다 ({len(rewriting_prompt)}자). 2900자로 단축합니다.")
+                    scene["rewriting_prompt"] = rewriting_prompt[:2900].rsplit(' ', 1)[0] + "."
                     print(f"✅ 단축 완료: {len(scene['rewriting_prompt'])}자")
                 elif len(rewriting_prompt) < 200:
                     print(f"⚠️ 장면 {idx + 1} rewriting_prompt가 너무 짧습니다 ({len(rewriting_prompt)}자).")

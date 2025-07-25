@@ -1,103 +1,33 @@
 from celery import shared_task
 import os
-import tempfile
 import subprocess
-from google.cloud import storage
-import requests
-from .veo_service import generate_signed_url, generate_video_from_text # generate_signed_url 함수 재사용
-from .models import Video # Video 모델 임포트
+from .veo_service import generate_signed_url, generate_video_from_text
+from .models import Video
 from characters.models import Character
-from narration.service.narration_service import generate_narration_for_character
 
 # 환경 변수 설정 (veo_service.py에서 가져옴)
-import os
 from dotenv import load_dotenv
 load_dotenv()
 GOOGLE_CLOUD_GCS_BUCKET = os.getenv("GOOGLE_CLOUD_GCS_BUCKET")
 
 @shared_task
-def create_video_for_scene(character_id, prompt, title, lines):
+def create_video_for_scene(character_id, prompt, title):
     """
-    Celery 작업으로 비디오 생성 및 나레이션 합성을 비동기적으로 처리합니다.
+    Celery 작업으로 비디오 생성을 비동기적으로 처리합니다.
+    (나레이션 생성 및 합성 로직 제거됨)
     """
-    video_file_path = None
-    audio_file_path = None
-    combined_file_path = None
     try:
-        # 1. 나레이션 생성
-        transformed_lines = []
-        for line_item in lines:
-            if "line_ko" in line_item:
-                transformed_lines.append({"speaker": line_item.get("speaker"), "text": line_item["line_ko"]})
-            elif "line_en" in line_item:
-                transformed_lines.append({"speaker": line_item.get("speaker"), "text": line_item["line_en"]})
-            else:
-                raise ValueError("Line item must contain 'line_ko' or 'line_en' field for narration.")
-
-        narration_results = generate_narration_for_character(character_id=character_id, lines=transformed_lines)
-        if not narration_results or not narration_results[0].get("audioUrl"):
-            raise Exception("나레이션 생성에 실패했습니다.")
-        narration_audio_url = narration_results[0]["audioUrl"]
-
-        # 2. 비디오 생성 (기존 로직 재사용)
+        # 1. 비디오 생성 (기존 로직 재사용)
         video_generation_result = generate_video_from_text(prompt=prompt, title=title, character_id=character_id)
         if not video_generation_result or not video_generation_result.get("video_uri"):
             raise Exception("비디오 생성에 실패했습니다.")
-        video_gcs_uri = video_generation_result["video_uri"]
-
-        storage_client = storage.Client()
-        bucket_name = GOOGLE_CLOUD_GCS_BUCKET.replace("gs://", "").rstrip('/')
-        bucket = storage_client.bucket(bucket_name)
-
-        # 3. GCS에서 비디오 다운로드
-        video_blob_name = video_gcs_uri.replace(f"gs://{bucket_name}/", "")
-        video_file_path = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4").name
-        bucket.blob(video_blob_name).download_to_filename(video_file_path)
-        print(f"Downloaded video {video_gcs_uri} to {video_file_path}")
-
-        # 4. 나레이션 오디오 다운로드
-        audio_file_path = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3").name
-        audio_response = requests.get(narration_audio_url)
-        audio_response.raise_for_status() # HTTP 오류 발생 시 예외 발생
-        with open(audio_file_path, 'wb') as f:
-            f.write(audio_response.content)
-        print(f"Downloaded audio {narration_audio_url} to {audio_file_path}")
-
-        # 5. FFmpeg를 사용하여 비디오와 오디오 합성
-        combined_file_path = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4").name
-        ffmpeg_command = [
-            "ffmpeg",
-            "-i", video_file_path,
-            "-i", audio_file_path,
-            "-c:v", "copy",
-            "-c:a", "aac",
-            "-strict", "experimental",
-            "-filter_complex", "[0:a][1:a]amix=inputs=2:duration=longest[a0]",
-            "-map", "0:v:0",
-            "-map", "[a0]",
-            "-y", # Overwrite output files without asking
-            combined_file_path
-        ]
-        print(f"Running ffmpeg command: {' '.join(ffmpeg_command)}")
-        subprocess.run(ffmpeg_command, check=True, capture_output=True)
-        print(f"Combined video and audio saved to {combined_file_path}")
-
-        # 6. 합성된 비디오를 GCS에 업로드
-        base_output_name = title.replace(' ', '_')
-        extension = ".mp4"
-        counter = 0
-        output_blob_name = f"generated_videos/{base_output_name}{extension}"
-
-        while bucket.blob(output_blob_name).exists():
-            counter += 1
-            output_blob_name = f"generated_videos/{base_output_name}_{counter}{extension}"
         
-        output_blob = bucket.blob(output_blob_name)
-        output_blob.upload_from_filename(combined_file_path)
-        final_gcs_uri = f"gs://{bucket_name}/{output_blob_name}"
-        print(f"Uploaded combined video with narration to {final_gcs_uri}")
+        final_gcs_uri = video_generation_result["video_uri"]
+        print(f"Video generated and saved to GCS: {final_gcs_uri}")
 
-        # 7. 데이터베이스 업데이트
+        # 2. 데이터베이스 업데이트
+        # 비디오 생성 결과를 직접 DB에 저장 (is_combined=False)
+        # combine_videos_task에서 최종 병합 후 is_combined=True로 별도 저장
         signed_url = generate_signed_url(final_gcs_uri)
         Video.objects.create(
             video_uri=final_gcs_uri,
@@ -105,32 +35,23 @@ def create_video_for_scene(character_id, prompt, title, lines):
             title=title,
             user_id=None, # user_id는 필요에 따라 설정
             character_id=character_id,
-            narration_audio_url=narration_audio_url # 나레이션 URL 저장
+            is_combined=False # 개별 장면 영상으로 표시
         )
-        print(f"Video with narration metadata saved to DB: {title}")
+        print(f"Video metadata saved to DB: {title}")
         print("영상생성이 완료되었습니다!")
 
-        return {"status": "success", "gcs_uri": final_gcs_uri, "signed_url": signed_url}
+        # combine_videos_task로 전달할 결과 반환
+        return {"status": "success", "gcs_uri": final_gcs_uri, "signed_url": signed_url, "title": title}
 
     except Character.DoesNotExist:
         print(f"Error: Character with id {character_id} not found.")
-        raise
-    except subprocess.CalledProcessError as e:
-        print(f"FFmpeg command failed: {e}")
-        print(f"Stdout: {e.stdout.decode()}")
-        print(f"Stderr: {e.stderr.decode()}")
-        raise
+        # 실패 시에도 명확한 상태를 반환하도록 수정
+        return {"status": "failure", "reason": f"Character with id {character_id} not found.", "title": title}
     except Exception as e:
         error_message = f"Error in create_video_for_scene for title '{title}': {e}"
         print(error_message)
         # 실패 시에도 명확한 상태를 반환하도록 수정
         return {"status": "failure", "reason": error_message, "title": title}
-    finally:
-        # 임시 파일 정리
-        for f in [video_file_path, audio_file_path, combined_file_path]:
-            if f and os.path.exists(f):
-                os.remove(f)
-                print(f"Cleaned up temporary file: {f}")
 
 @shared_task(bind=True)
 def combine_videos_task(self, results, output_title, user_id=None, character_id=None):

@@ -64,30 +64,8 @@ class CharacterConditionalCreateOrListView(APIView):
         existing_characters = Character.objects.filter(book=book, is_deleted=False)
         if existing_characters.exists():
             # print(f"✅ 기존 캐릭터 {existing_characters.count()}개 발견, 목록 반환")
-            data = []
-            for character in existing_characters:
-                # 기존 캐릭터의 장면 정보도 함께 조회
-                scenes = CharacterScene.objects.filter(character=character, is_deleted=False)
-                scene_data = [
-                    {
-                        'id': scene.id,
-                        'scene_content': scene.scene_content,
-                        'start_page': scene.start_page,
-                        'finish_page': scene.finish_page,
-                    }
-                    for scene in scenes
-                ]
-                
-                data.append({
-                    'id': character.id,
-                    'characterName': character.characterName,
-                    'isMain': character.isMain,
-                    'age': character.age,
-                    'gender': character.gender,
-                    'characterDescription': character.characterDescription,
-                    'scenes': scene_data
-                })
-            return Response(data, status=200)
+            serializer = CharacterSerializer(existing_characters, many=True)
+            return Response(serializer.data, status=200)
 
         # Gemini API 호출로 캐릭터 생성 (새로운 방식)
         # print(f"🤖 캐릭터가 없어서 Gemini API로 새로 생성 시작")
@@ -231,7 +209,7 @@ class ScriptGenerateView(APIView):
                     "camera": scene.get("camera"),
                     "soundtrack": scene.get("soundtrack"),
                     "characters": scene.get("characters"),
-                    "lines": scene.get("lines"),
+                    # "lines": scene.get("lines"),
                     "rewriting_prompt": scene.get("rewriting_prompt"),
                     "rewriting_id": scene.get("rewriting_id")  # 이미 파싱 함수에서 생성됨
                 })

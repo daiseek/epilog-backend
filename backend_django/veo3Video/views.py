@@ -55,10 +55,10 @@ class VideoGenerationFromScriptView(APIView):
             prompt = scene.get('rewriting_prompt')
             scene_id = scene.get('sceneId')
             title = f"{character_instance.characterName} - Scene {scene_id}" # character_instance 사용
-            lines = scene.get('lines', []) # lines 데이터 추가
+            # lines = scene.get('lines', []) # lines 데이터 추가
 
             if prompt:
-                create_video_for_scene.delay(character_id=character_id, prompt=prompt, title=title, lines=lines)
+                create_video_for_scene.delay(character_id=character_id, prompt=prompt, title=title)
 
         return Response({"message": f"Video generation started for {len(scenes)} scenes."}, status=status.HTTP_202_ACCEPTED)
 
@@ -71,7 +71,7 @@ class TextToVideoView(APIView):
         prompt = request.data.get("prompt")
         title = request.data.get("title")
         character_id = request.data.get("character_id")
-        lines = request.data.get("lines", []) # lines 데이터 추가
+        # lines = request.data.get("lines", []) # lines 데이터 추가
 
         # [JWT 통합 예정] 여기에 JWT 방식으로 사용자 ID를 받아오는 기능 개발
         # 현재는 user_id를 None으로 설정하여 익명 사용자로 처리합니다。
@@ -83,7 +83,7 @@ class TextToVideoView(APIView):
             # 필수 필드가 누락된 경우 400 Bad Request 응답을 반환합니다。
             return Response({"error": "Prompt and title are required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        create_video_for_scene.delay(character_id=character_id, prompt=prompt, title=title, lines=lines)
+        create_video_for_scene.delay(character_id=character_id, prompt=prompt, title=title)
 
         return Response({"message": "Video generation started."}, status=status.HTTP_202_ACCEPTED)
 
@@ -151,7 +151,6 @@ class FullStoryGenerationView(APIView):
         *   각 `scene`에 대해 `create_video_for_scene` Celery 태스크를 생성하고, 이 태스크들을 `scene_tasks` 리스트에 추가합니다.
         *   `create_video_for_scene` 태스크는 다음을 담당합니다:
             *   해당 장면의 텍스트 프롬프트로부터 비디오 생성 (Veo API 사용).
-            *   장면 대사를 기반으로 나레이션 오디오 생성 (ElevenLabs API 사용).
             *   생성된 비디오와 나레이션 오디오를 FFmpeg를 사용하여 합성.
             *   합성된 비디오를 Google Cloud Storage (GCS)에 업로드.
             *   생성된 비디오의 메타데이터를 데이터베이스에 저장.
@@ -207,13 +206,13 @@ class FullStoryGenerationView(APIView):
             prompt = scene.get('rewriting_prompt')
             scene_id = scene.get('sceneId')
             title = f"{character_instance.characterName} - Scene {scene_id}" # 비디오 제목 설정
-            lines = scene.get('lines', []) # 나레이션 생성을 위한 대사 데이터
+            # lines = scene.get('lines', []) # 나레이션 생성을 위한 대사 데이터
 
             # 프롬프트가 있는 장면에 대해서만 비디오 생성 태스크를 추가
             # .s 메소드는 Celery 태스크로 등록하는 메소드로, `create_video_for_scene` 함수를 직접 실행하는 것이 아님
             if prompt:
                 scene_tasks.append(
-                    create_video_for_scene.s(character_id=character_id, prompt=prompt, title=title, lines=lines)
+                    create_video_for_scene.s(character_id=character_id, prompt=prompt, title=title)
                 )
 
         if not scene_tasks:

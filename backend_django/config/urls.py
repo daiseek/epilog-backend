@@ -29,7 +29,7 @@ urlpatterns = [
     path('characters/', include('characters.urls')),
     path('users/', include('users.urls')),
     path("", index),
-    path('narration/', include('narration.urls')),
+    
     path('', include('django_prometheus.urls')),
 ]
 
