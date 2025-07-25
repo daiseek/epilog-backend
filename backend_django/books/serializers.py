@@ -51,6 +51,25 @@ class BookCharacterResponseSerializer(serializers.Serializer):
     gender = serializers.CharField()
     character_description = serializers.CharField(source='characterDescription')
 
+# 비동기 PDF 처리를 위한 응답 Serializer들
+class BookAsyncUploadResponseSerializer(serializers.Serializer):
+    book_id = serializers.IntegerField(help_text="생성된 책 ID")
+    title = serializers.CharField(help_text="책 제목")
+    processing_status = serializers.CharField(help_text="처리 상태 (PENDING, PROCESSING, COMPLETED, FAILED)")
+    task_id = serializers.CharField(help_text="Celery 태스크 ID", allow_null=True)
+    message = serializers.CharField(help_text="상태 메시지")
+
+class BookStatusResponseSerializer(serializers.Serializer):
+    book_id = serializers.IntegerField(help_text="책 ID")
+    title = serializers.CharField(help_text="책 제목")
+    processing_status = serializers.CharField(help_text="처리 상태")
+    task_id = serializers.CharField(help_text="Celery 태스크 ID", allow_null=True)
+    content = serializers.CharField(help_text="책 내용 요약", allow_null=True)
+    pdf_url = serializers.CharField(help_text="PDF 파일 URL", allow_null=True)
+    error_message = serializers.CharField(help_text="오류 메시지", allow_null=True)
+    created_at = serializers.DateTimeField(help_text="생성일시")
+    updated_at = serializers.DateTimeField(help_text="수정일시")
+
 # Swagger 문서화를 위한 응답 Serializer들
 class BookErrorResponseSerializer(serializers.Serializer):
     status = serializers.CharField(help_text="에러 상태")

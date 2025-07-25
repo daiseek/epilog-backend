@@ -14,7 +14,9 @@ from .serializers import (
     BookVideoResponseSerializer,
     BookCharacterResponseSerializer,
     BookErrorResponseSerializer,
-    BookSuccessResponseSerializer
+    BookSuccessResponseSerializer,
+    BookAsyncUploadResponseSerializer,
+    BookStatusResponseSerializer
 )
 from .models import Book
 from veo3Video.models import Video
@@ -61,18 +63,20 @@ class BookFromPdfView(APIView):
     permission_classes = [IsAuthenticated]  # JWT 인증 필요
 
     @swagger_auto_schema(
-        operation_description="""PDF 파일을 업로드하여 책을 생성합니다. (JWT 인증 필요)
+        operation_description="""PDF 파일을 업로드하여 책을 비동기적으로 생성합니다. (JWT 인증 필요)
         
         처리 과정:
-        1. PDF에서 텍스트 추출 (텍스트 기반 또는 OCR)
-        2. Gemini API로 내용 요약
-        3. S3에 PDF 파일 업로드
-        4. DB에 책 정보 저장
+        1. 즉시 책 레코드 생성 및 응답 반환
+        2. 백그라운드에서 PDF 처리:
+           - PDF에서 텍스트 추출 (텍스트 기반 또는 OCR)
+           - Gemini API로 내용 요약
+           - S3에 PDF 파일 업로드
+           - DB에 최종 정보 업데이트
         
         가능한 오류:
         - 400: PDF 파일 누락, 잘못된 형식
         - 401: 인증 필요
-        - 500: PDF 파싱 실패, API 오류, S3 업로드 실패
+        - 500: 초기 처리 실패
         """,
         manual_parameters=[
             openapi.Parameter(
@@ -91,7 +95,7 @@ class BookFromPdfView(APIView):
             ),
         ],
         responses={
-            201: BookSuccessResponseSerializer,
+            202: BookAsyncUploadResponseSerializer,
             400: BookErrorResponseSerializer,
             401: openapi.Response(description="인증 필요"),
             500: BookErrorResponseSerializer
@@ -99,19 +103,8 @@ class BookFromPdfView(APIView):
         tags=['책 관리']
     )
     def post(self, request):
-        # print("📝 PDF 업로드 요청 데이터:", request.data)
-        # print("👤 요청 사용자:", request.user.username if request.user.is_authenticated else "익명")
-        # print("📁 파일 목록:", request.FILES)
-        # print("🔍 요청 헤더 Content-Type:", request.content_type)
-        # print("🔍 요청 메소드:", request.method)
-
-        # 파일 업로드 상세 디버깅
-        if 'pdf' in request.FILES:
-            pdf_file = request.FILES['pdf']
-            # print(f"✅ PDF 파일 감지: {pdf_file.name}, 크기: {pdf_file.size} bytes")
-        # else:
-            # print("❌ PDF 파일이 request.FILES에 없습니다.")
-            # print("🔍 사용 가능한 키들:", list(request.FILES.keys()))
+        print("📝 비동기 PDF 업로드 요청 시작")
+        print("👤 요청 사용자:", request.user.username if request.user.is_authenticated else "익명")
 
         serializer = BookPdfUploadSerializer(data=request.data)
         if not serializer.is_valid():
@@ -129,40 +122,44 @@ class BookFromPdfView(APIView):
         print(f"✅ 검증 완료 - 제목: {title}, 파일명: {pdf_file.name}")
 
         try:
-            # 1. PDF 텍스트 추출
-            # print("📖 PDF 텍스트 추출 시작...")
-            extracted_text = extract_text_from_pdf(pdf_file)
-            # print(f"📄 추출된 텍스트 길이: {len(extracted_text)} 문자")
-
-            # 2. Gemini 요약
-            # print("🤖 Gemini API 요약 시작...")
-            summary = summarize_with_gemini(extracted_text)
-            # print(f"📝 요약 완료: {len(summary)} 문자")
-
-            # 3. S3 업로드 => pdf_URL을 얻어냄
-            # print("☁️ S3 업로드 시작...")
-            pdf_file.seek(0)
-            pdf_url = upload_to_s3(pdf_file)
-            # print(f"🔗 S3 업로드 완료: {pdf_url}")
-
-            # 4. DB 저장 (user 외래키 없음)
-            # print("💾 DB 저장 시작...")
+            # 1. 즉시 Book 레코드 생성 (PENDING 상태)
             book = Book.objects.create(
                 title=title,
-                content=summary,
-                pdf_url=pdf_url
+                processing_status='PENDING'
             )
-            # print(f"✅ 책 생성 완료 - ID: {book.id}")
+            print(f"📚 책 레코드 생성 완료 - ID: {book.id}")
 
+            # 2. PDF 파일을 base64로 인코딩
+            pdf_file.seek(0)
+            pdf_content = pdf_file.read()
+            import base64
+            pdf_base64 = base64.b64encode(pdf_content).decode('utf-8')
+            
+            # 3. Celery 태스크 시작
+            from .tasks import process_book_pdf_task
+            task = process_book_pdf_task.delay(
+                book_id=book.id,
+                pdf_file_content=pdf_base64,
+                pdf_file_name=pdf_file.name
+            )
+            
+            # 4. 태스크 ID 저장
+            book.task_id = task.id
+            book.save()
+            
+            print(f"🚀 비동기 처리 시작 - Task ID: {task.id}")
+
+            # 5. 즉시 응답 반환
             return Response({
                 "book_id": book.id,
                 "title": book.title,
-                "content": book.content,
-                "pdf_url": book.pdf_url
-            }, status=201)
+                "processing_status": book.processing_status,
+                "task_id": task.id,
+                "message": "PDF 처리가 시작되었습니다. 처리 상태는 GET /books/{book_id}/status 로 확인 가능합니다."
+            }, status=202)  # 202 Accepted
 
         except Exception as e:
-            print(f"[ERROR] PDF 처리 중 오류 발생: {str(e)}")
+            print(f"[ERROR] 초기 처리 중 오류 발생: {str(e)}")
             print(f"[ERROR] 오류 타입: {type(e).__name__}")
             import traceback
             print(f"[ERROR] 상세 스택 트레이스:\n{traceback.format_exc()}")
@@ -170,7 +167,7 @@ class BookFromPdfView(APIView):
             return Response({
                 "status": "error",
                 "error_code": 500,
-                "message": f"PDF 처리 중 오류가 발생했습니다: {str(e)}"
+                "message": f"초기 처리 중 오류가 발생했습니다: {str(e)}"
             }, status=500)
 
 
@@ -294,3 +291,51 @@ class BookCharactersView(APIView):
                 "error_code": 500,
                 "message": "서버 내부 오류가 발생했습니다."
             }, status=500)
+
+class BookStatusView(APIView):
+    """
+    책 PDF 처리 상태를 확인하는 API
+    """
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_description="""책 PDF 처리 상태를 확인합니다. (JWT 인증 필요)
+        
+        처리 상태:
+        - PENDING: 처리 대기 중
+        - PROCESSING: 처리 진행 중  
+        - COMPLETED: 처리 완료
+        - FAILED: 처리 실패
+        """,
+        responses={
+            200: BookStatusResponseSerializer,
+            404: BookErrorResponseSerializer,
+            401: openapi.Response(description="인증 필요")
+        },
+        tags=['책 관리']
+    )
+    def get(self, request, book_id):
+        try:
+            book = Book.objects.get(id=book_id, is_deleted=False)
+            
+            response_data = {
+                "book_id": book.id,
+                "title": book.title,
+                "processing_status": book.processing_status,
+                "task_id": book.task_id,
+                "content": book.content,
+                "pdf_url": book.pdf_url,
+                "error_message": book.error_message,
+                "created_at": book.created_at,
+                "updated_at": book.updated_at
+            }
+            
+            print(f"📊 책 상태 조회 - ID: {book_id}, 상태: {book.processing_status}")
+            return Response(response_data, status=200)
+            
+        except Book.DoesNotExist:
+            return Response({
+                "status": "error",
+                "error_code": 404,
+                "message": "책을 찾을 수 없습니다."
+            }, status=404)

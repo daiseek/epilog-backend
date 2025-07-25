@@ -190,7 +190,7 @@ MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/media/"
 # https://docs.djangoproject.com/en/5.2/topics/cache/
 CACHES = {
 
-    # 기본 캐시 설정
+    # 기본 캐시 설정 - Celery 작업 결과물 저장
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
         'LOCATION': f'redis://{env("REDIS_HOST", default="backend-redis")}:{env("REDIS_PORT", default="6379")}/1',
