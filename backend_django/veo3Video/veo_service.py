@@ -21,6 +21,9 @@ PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT_ID") # Google Cloud 프로젝트 ID
 LOCATION = os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1") # Veo 3 API가 사용 가능한 리전,Veo us-central1 말고는 불가
 GOOGLE_CLOUD_GCS_BUCKET = os.getenv("GOOGLE_CLOUD_GCS_BUCKET") # 비디오가 저장될 Google Cloud Storage 버킷 경로
 
+print(f"DEBUG: PROJECT_ID from env: {PROJECT_ID}")
+print(f"DEBUG: LOCATION from env: {LOCATION}")
+
 # Google GenAI 클라이언트 초기화
 # 이 클라이언트를 통해 Veo 3 API에 접근.
 # GOOGLE_CLOUD_PROJECT, GOOGLE_CLOUD_LOCATION, GOOGLE_GENAI_USE_VERTEXAI 환경 변수 사용.
@@ -97,7 +100,7 @@ def generate_video_from_text(prompt: str, title: str, character_id: int = None, 
         # Veo 3 모델 로드, 비디오 생성 요청 전송
         print(f"[Veo] Generating video with prompt: {prompt}")
         operation = client.models.generate_videos(
-            model="veo-3.0-generate-preview",
+            model=f"projects/{PROJECT_ID}/locations/{LOCATION}/publishers/google/models/veo-3.0-generate-preview",
             prompt=prompt,
             config=GenerateVideosConfig(
                 output_gcs_uri=temp_output_prefix,

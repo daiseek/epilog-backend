@@ -94,7 +94,7 @@ INSTALLED_APPS = [
     'veo3Video',
 
     'users', # Users 애플리케이션 추가
-    'narration', # Narration 애플리케이션 추가
+    
 
     # 's3test', # S3 테스트용 앱
 
@@ -283,7 +283,7 @@ from datetime import timedelta
 SIMPLE_JWT = {
     # 토큰 수명 (환경변수로 관리)
     'ACCESS_TOKEN_LIFETIME': timedelta(
-        minutes=env.int('JWT_ACCESS_TOKEN_LIFETIME_MINUTES', default=60)  # 개발: 60분 (개발 편의성)
+        minutes=env.int('JWT_ACCESS_TOKEN_LIFETIME_MINUTES', default=3600)  # 개발: 60분 (개발 편의성)
     ),
     'REFRESH_TOKEN_LIFETIME': timedelta(
         days=env.int('JWT_REFRESH_TOKEN_LIFETIME_DAYS', default=7)  # 개발: 7일 (개발 편의성)
