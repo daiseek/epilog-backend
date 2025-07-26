@@ -4,6 +4,10 @@ import subprocess
 from .veo_service import generate_signed_url, generate_video_from_text
 from .models import Video
 from characters.models import Character
+from google.cloud import storage
+import tempfile
+from datetime import datetime
+import uuid
 
 # 환경 변수 설정 (veo_service.py에서 가져옴)
 from dotenv import load_dotenv
@@ -122,13 +126,22 @@ def combine_videos_task(self, results, output_title, user_id=None, character_id=
 
         # 3. 합쳐진 비디오를 GCS에 업로드
         base_output_name = output_title.replace(' ', '_')
-        extension = ".mp4"
-        counter = 0
-        output_blob_name = f"combined_videos/{base_output_name}{extension}"
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        unique_id = uuid.uuid4().hex[:8]
 
+        # character_id가 있으면 파일 이름에 포함
+        if character_id:
+            output_blob_name = f"combined_videos/{character_id}_{base_output_name}_{timestamp}_{unique_id}.mp4"
+        else:
+            output_blob_name = f"combined_videos/{base_output_name}_{timestamp}_{unique_id}.mp4"
+
+        # 혹시 모를 충돌 방지 로직 유지
         while bucket.blob(output_blob_name).exists():
-            counter += 1
-            output_blob_name = f"combined_videos/{base_output_name}_{counter}{extension}"
+            unique_id = uuid.uuid4().hex[:8]
+            if character_id:
+                output_blob_name = f"combined_videos/{character_id}_{base_output_name}_{timestamp}_{unique_id}.mp4"
+            else:
+                output_blob_name = f"combined_videos/{base_output_name}_{timestamp}_{unique_id}.mp4"
         
         output_blob = bucket.blob(output_blob_name)
         output_blob.upload_from_filename(combined_video_path.name)
