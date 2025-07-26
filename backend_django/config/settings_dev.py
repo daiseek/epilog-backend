@@ -100,6 +100,7 @@ INSTALLED_APPS = [
 
 
     'django_prometheus', # Django Prometheus 추가
+    'django_eventstream',
     'rest_framework', # Django REST framework 추가
     'rest_framework_simplejwt', # JWT 인증 추가
     'rest_framework_simplejwt.token_blacklist', # JWT 토큰 블랙리스트 추가
@@ -343,3 +344,4 @@ SWAGGER_SETTINGS = {
     'DEFAULT_MODEL_RENDERING': 'example'
 }
 
+\n# Django Eventstream 설정\nEVENTSTREAM_REDIS_URL = f"redis://{env("REDIS_HOST", default="backend-redis")}:{env("REDIS_PORT", default="6379")}/3"

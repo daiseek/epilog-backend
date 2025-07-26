@@ -22,3 +22,4 @@ drf-yasg>=1.21.7
 django-cors-headers>=3.13.0
 celery==5.3.6
 redis==5.0.4
+django-eventstream

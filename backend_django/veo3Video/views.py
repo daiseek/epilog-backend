@@ -135,6 +135,9 @@ class CombineVideosView(APIView):
         return Response({"message": "Video combination started."}, status=status.HTTP_202_ACCEPTED)
 
 
+import uuid
+from django_eventstream import send_event
+
 class FullStoryGenerationView(APIView):
     """
     전체 스토리 비디오 생성 프로세스를 시작하는 API 뷰.
@@ -180,15 +183,17 @@ class FullStoryGenerationView(APIView):
         if not script_id:
             return Response({"error": "script_id is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        script_cache = caches['script_cache']  # 'script_cache'라는 이름의 캐시 인스턴스를 가져옵니다.
-        cached_data = script_cache.get(f"script:{script_id}") # # 캐시에서 script_id에 해당하는 데이터를 조회합니다.
+        # SSE 채널 ID 생성
+        channel_id = f"video-generation-{uuid.uuid4()}"
+
+        script_cache = caches['script_cache']
+        cached_data = script_cache.get(f"script:{script_id}")
 
         if not cached_data:
             return Response({"error": "Script not found in cache or expired"}, status=status.HTTP_404_NOT_FOUND)
 
         character_id = cached_data.get('characterId')
         scenes = cached_data.get('scenes', [])
-        # [JWT 통합 예정] 현재는 user_id를 None으로 설정
         user_id = None
 
         if not character_id or not scenes:
@@ -199,42 +204,33 @@ class FullStoryGenerationView(APIView):
         except Character.DoesNotExist:
             return Response({"error": f"Character with id {character_id} not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        # 각 장면에 대한 비디오 생성 태스크 리스트를 준비(각scene에 rewriting_prompt, sceneId, lines를 추출)
-        # 이 태스크들은 Celery chord의 '헤더' 부분으로, 병렬로 실행됩니다.
         scene_tasks = []
         for scene in scenes:
             prompt = scene.get('rewriting_prompt')
             scene_id = scene.get('sceneId')
-            title = f"{character_instance.characterName} - Scene {scene_id}" # 비디오 제목 설정
-            # lines = scene.get('lines', []) # 나레이션 생성을 위한 대사 데이터
-
-            # 프롬프트가 있는 장면에 대해서만 비디오 생성 태스크를 추가
-            # .s 메소드는 Celery 태스크로 등록하는 메소드로, `create_video_for_scene` 함수를 직접 실행하는 것이 아님
+            title = f"{character_instance.characterName} - Scene {scene_id}"
             if prompt:
                 scene_tasks.append(
-                    create_video_for_scene.s(character_id=character_id, prompt=prompt, title=title)
+                    create_video_for_scene.s(character_id=character_id, prompt=prompt, title=title, channel_id=channel_id)
                 )
 
         if not scene_tasks:
             return Response({"error": "No scenes with prompts found to generate videos."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # 최종 병합될 비디오의 제목 설정
         final_output_title = f"{character_instance.characterName}_FullStory"
 
-        # Celery chord를 사용하여 모든 장면 비디오가 생성된 후 최종 비디오를 합치는 태스크를 실행
-        # chord는 (병렬 실행할 태스크 그룹, 그룹 완료 후 실행할 콜백 태스크)로 구성됩니다.
         from celery import chord
         
-        # 콜백 태스크 정의: 모든 scene_tasks가 완료된 후 실행됩니다.
         callback = combine_videos_task.s(
             output_title=final_output_title,
             user_id=user_id,
-            character_id=character_id
+            character_id=character_id,
+            channel_id=channel_id
         )
         
-        # chord 실행: scene_tasks를 병렬로 실행하고, 모든 결과가 반환되면 callback 태스크를 실행합니다.
-        # chord는 scene_tasks 리스트에 있는 모든 태스크를 병렬로 실행하도록 지시하고, 이 모든 태스크가 성공적으로 완료되면
-        # 그 결과들을 callback 태스크로 전달하여 실행하도록 예약
         chord(scene_tasks)(callback)
 
-        return Response({"message": "Full story video generation process has been successfully initiated."}, status=status.HTTP_202_ACCEPTED)
+        # 작업 시작 이벤트 전송
+        send_event(channel_id, 'message', {'status': 'process_started', 'message': f'Full story generation started for {character_instance.characterName}.'})
+
+        return Response({"channel_id": channel_id}, status=status.HTTP_202_ACCEPTED)
