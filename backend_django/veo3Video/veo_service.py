@@ -135,17 +135,25 @@ def generate_video_from_text(prompt: str, title: str, character_id: int = None, 
             source_bucket = storage_client.bucket(bucket_name)
             source_blob = source_bucket.blob(temp_blob_name)
 
-            # 최종 저장될 폴더 및 파일명 설정 (title을 기반으로 고유한 이름 생성)
+            # 최종 저장될 폴더 및 파일명 설정 (title, character_id, timestamp, uuid 기반으로 고유한 이름 생성)
             # 특수문자 및 공백을 언더스코어로 대체하여 파일명으로 적합하게 만듭니다.
             safe_title = "".join(c if c.isalnum() or c == ' ' else '_' for c in title).replace(' ', '_')
-            final_blob_name = f"generated_videos/{safe_title}.mp4"
+            unique_id = uuid.uuid4().hex[:8] # 8자리 UUID
+            timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
             
-            # 파일명 충돌 방지를 위해 고유한 UUID를 추가
-            counter = 0
-            original_final_blob_name = final_blob_name
+            # character_id가 있는 경우 파일 이름에 포함
+            if character_id:
+                final_blob_name = f"generated_videos/{character_id}_{safe_title}_{timestamp}_{unique_id}.mp4"
+            else:
+                final_blob_name = f"generated_videos/{safe_title}_{timestamp}_{unique_id}.mp4"
+
+            # 파일명 충돌은 거의 발생하지 않지만, 만약을 위해 중복 확인 로직 유지
             while source_bucket.blob(final_blob_name).exists():
-                counter += 1
-                final_blob_name = f"generated_videos/{safe_title}_{counter}.mp4"
+                unique_id = uuid.uuid4().hex[:8]
+                if character_id:
+                    final_blob_name = f"generated_videos/{character_id}_{safe_title}_{timestamp}_{unique_id}.mp4"
+                else:
+                    final_blob_name = f"generated_videos/{safe_title}_{timestamp}_{unique_id}.mp4"
 
             print(f"[Veo] Final blob name: {final_blob_name}")
             
