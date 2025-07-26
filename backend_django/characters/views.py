@@ -43,6 +43,10 @@ class CharacterConditionalCreateOrListView(APIView):
         - 캐릭터가 이미 존재하면: 기존 캐릭터 목록 반환 (200)
         - 캐릭터가 없으면: Gemini API로 새로 생성 (201)
         
+        생성 제한사항:
+        - 최대 10명까지 생성 (주인공 우선순위)
+        - 중복 캐릭터 자동 병합
+        
         가능한 오류:
         - 401: 인증 필요
         - 404: 책을 찾을 수 없음
@@ -242,6 +246,7 @@ class ScriptGenerateView(APIView):
             }, status=500)
 
 
+
 ''' 대본 생성 기능 (비동기 버전) '''
 class ScriptGenerateAsyncView(APIView):
     permission_classes = [IsAuthenticated]  # JWT 인증 필요
@@ -296,22 +301,28 @@ class ScriptGenerateAsyncView(APIView):
         print(f"✅ 검증 완료 - 캐릭터: {character.characterName}, 장면 수: {scene_count}")
 
         try:
-            # 1. Celery 태스크 시작
+            # 🆔 script_id 미리 생성 (클라이언트가 즉시 받을 수 있도록)
+            import uuid
+            script_id = str(uuid.uuid4())
+            
+            # 1. Celery 태스크 시작 (script_id 전달)
             from .tasks import generate_script_task
             task = generate_script_task.delay(
                 character_id=character_id,
-                scene_count=scene_count
+                scene_count=scene_count,
+                script_id=script_id  # 미리 생성된 script_id 전달
             )
             
-            print(f"🚀 비동기 처리 시작 - Task ID: {task.id}")
+            print(f"🚀 비동기 처리 시작 - Task ID: {task.id}, Script ID: {script_id}")
 
-            # 2. 즉시 응답 반환
+            # 2. 즉시 응답 반환 (script_id 포함)
             return Response({
                 "task_id": task.id,
+                "script_id": script_id,  # 🔑 클라이언트가 즉시 받을 script_id
                 "character_id": character_id,
                 "character_name": character.characterName,
                 "scene_count": scene_count,
-                "message": "대본 생성이 시작되었습니다. 처리 상태는 GET /characters/tasks/{task_id}/status 로 확인 가능합니다."
+                "message": f"대본 생성이 시작되었습니다. Script ID: {script_id} (영상 생성에 사용 가능)"
             }, status=202)  # 202 Accepted
 
         except Exception as e:
@@ -407,13 +418,18 @@ class CharacterGenerateAsyncView(APIView):
     @swagger_auto_schema(
         operation_description="""책의 캐릭터들을 비동기적으로 생성합니다. (JWT 인증 필요)
         
-        고급 처리 과정:
+        조건부 생성 로직:
+        - 캐릭터가 이미 존재하면: 기존 캐릭터 목록 반환 (200)
+        - 캐릭터가 없으면: 백그라운드에서 비동기 생성 (202)
+        
+        고급 처리 과정 (생성 시):
         1. 즉시 Task ID 반환
         2. 백그라운드에서 스마트 처리:
            - PDF 다운로드 및 스마트 청킹 (페이지 크기에 따른 적응적 분할)
            - 캐릭터 우선순위 기반 청크 선별
            - 청크별 병렬 캐릭터 추출 (에러 재시도 포함)
            - 중복 제거 및 스마트 병합
+           - 캐릭터 수 제한 (최대 10명, 주인공 우선)
            - 캐릭터별 장면 생성 및 DB 저장
         
         대형 PDF 대응 기능:
@@ -429,6 +445,18 @@ class CharacterGenerateAsyncView(APIView):
         - 500: 초기 처리 실패
         """,
         responses={
+            200: openapi.Response(
+                description="기존 캐릭터 목록 반환",
+                examples={
+                    "application/json": {
+                        "message": "이미 5개의 캐릭터가 존재합니다.",
+                        "book_id": 1,
+                        "book_title": "카라마조프가의 형제들",
+                        "total_characters": 5,
+                        "characters": "캐릭터 목록"
+                    }
+                }
+            ),
             202: CharacterAsyncResponseSerializer,
             401: openapi.Response(description="인증 필요"),
             404: CharacterErrorResponseSerializer,
@@ -446,12 +474,19 @@ class CharacterGenerateAsyncView(APIView):
         except Book.DoesNotExist:
             return Response({'error': 'Book not found'}, status=404)
 
-        # 기존 캐릭터 존재 여부 확인
+        # 🔄 조건부 생성: 기존 캐릭터 존재 여부 확인
         existing_characters = Character.objects.filter(book=book, is_deleted=False)
         if existing_characters.exists():
+            print(f"✅ 기존 캐릭터 {existing_characters.count()}개 발견, 목록 반환")
+            from .serializers import CharacterSerializer
+            serializer = CharacterSerializer(existing_characters, many=True)
             return Response({
-                'error': f'이 책에는 이미 {existing_characters.count()}개의 캐릭터가 존재합니다. 기존 캐릭터를 삭제 후 다시 시도하세요.'
-            }, status=409)
+                "message": f"이미 {existing_characters.count()}개의 캐릭터가 존재합니다.",
+                "book_id": book_id,
+                "book_title": book.title,
+                "total_characters": existing_characters.count(),
+                "characters": serializer.data
+            }, status=200)  # 409 대신 200으로 기존 데이터 반환
 
         print(f"✅ 검증 완료 - 책: {book.title}")
 

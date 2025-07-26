@@ -22,6 +22,6 @@ urlpatterns = [
     path('tasks/<str:task_id>/status', ScriptTaskStatusView.as_view()),  # 대본 생성 상태 확인 (Redis 기반)
 
     # === 실시간 알림 (EventStream) ===
-    path('<int:character_id>/eventstream/scripts', script_generation_eventstream), # 대본 생성 상태
+    path('scripts/<str:script_id>/eventstream', script_generation_eventstream), # 대본 생성 상태 (script_id 기반)
 
 ]

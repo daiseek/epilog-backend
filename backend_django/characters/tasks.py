@@ -23,33 +23,56 @@ import datetime
 logger = get_task_logger(__name__)
 
 @shared_task(bind=True)
-def generate_script_task(self, character_id, scene_count=3):
+def generate_script_task(self, character_id, scene_count=3, script_id=None):
     """
     대본을 비동기적으로 생성하는 Celery 태스크 (Redis 기반)
     
     Args:
         character_id: Character ID
         scene_count: 생성할 장면 수
+        script_id: 미리 생성된 Script ID (없으면 자동 생성)
     """
     task_id = self.request.id
     script_cache = caches['script_cache']
     
+    # 🆔 script_id 처리 (미리 제공되지 않으면 생성)
+    if not script_id:
+        import uuid
+        script_id = str(uuid.uuid4())
+    
     # Redis에 태스크 상태 저장
     task_key = f"task:{task_id}"
+    script_key = f"script:{script_id}"
     
     try:
-        # 1. 초기 상태 저장
+        # 1. 초기 상태 저장 (script_id 포함)
         init_data = {
             "status": "PROCESSING",
             "character_id": character_id,
             "scene_count": scene_count,
+            "script_id": script_id,  # 🔑 즉시 script_id 저장
             "started_at": datetime.datetime.now().isoformat(),
             "message": "대본 생성 중..."
         }
         script_cache.set(task_key, init_data, timeout=3600)  # 1시간
         
-        # 📡 실시간 알림: 대본 생성 시작
-        notify_script_progress(character_id, task_id, "PROCESSING", **init_data)
+        # script:{script_id} 키에도 초기 상태 저장 (EventStream용)
+        script_init_data = {
+            "character_id": character_id,
+            "characterId": character_id,  # 호환성
+            "character_name": "",  # 나중에 Character 조회 후 업데이트
+            "script_id": script_id,
+            "status": "PROCESSING",
+            "started_at": datetime.datetime.now().isoformat(),
+            "message": "대본 생성 중...",
+            "scene_count": scene_count,
+            "scenes": []  # 빈 장면 리스트로 시작
+        }
+        script_cache.set(script_key, script_init_data, timeout=2000)
+        
+        # 📡 실시간 알림: 대본 생성 시작 (중복 키 제거)
+        init_data_for_notify = {k: v for k, v in init_data.items() if k not in ['status', 'script_id']}
+        notify_script_progress(script_id, "PROCESSING", **init_data_for_notify)
         
         logger.info(f"📝 [TASK START] 대본 생성 시작 - Character ID: {character_id}, Task ID: {task_id}")
         
@@ -77,8 +100,9 @@ def generate_script_task(self, character_id, scene_count=3):
         }
         script_cache.set(task_key, gemini_data, timeout=3600)
         
-        # 📡 실시간 알림: AI 대본 생성 중
-        notify_script_progress(character_id, task_id, "PROCESSING", **gemini_data)
+        # 📡 실시간 알림: AI 대본 생성 중 (중복 키 제거)
+        gemini_data_for_notify = {k: v for k, v in gemini_data.items() if k not in ['status']}
+        notify_script_progress(script_id, "PROCESSING", **gemini_data_for_notify)
         
         raw_text = generate_scenes_with_gemini(
             main_character=character,
@@ -102,9 +126,9 @@ def generate_script_task(self, character_id, scene_count=3):
         
         parsed_result = parse_scene_list(raw_text)
         
-        script_id = parsed_result.get("script_id")
+        # 🆔 미리 생성된 script_id 사용 (파싱된 것 무시)
         scene_texts = parsed_result.get("scenes", [])
-        logger.info(f"🔍 [PARSING] 파싱 완료 - Script ID: {script_id}, 장면 수: {len(scene_texts)}")
+        logger.info(f"🔍 [PARSING] 파싱 완료 - Script ID: {script_id} (미리 생성됨), 장면 수: {len(scene_texts)}")
         
         # scene 구조 생성
         generated_scenes = []
@@ -122,11 +146,19 @@ def generate_script_task(self, character_id, scene_count=3):
                 "rewriting_id": scene.get("rewriting_id")
             })
         
-        # 대본을 Redis에 저장
+        # 대본을 Redis에 저장 (상태 정보 포함)
         script_cache_key = f"script:{script_id}"
         script_cache.set(script_cache_key, {
             "characterId": character_id,
-            "scenes": generated_scenes
+            "character_id": character_id,  # 호환성을 위해 두 형태 모두 저장
+            "character_name": character.characterName,
+            "scenes": generated_scenes,
+            "scene_count": len(generated_scenes),
+            "script_id": script_id,
+            "status": "COMPLETED",
+            "started_at": datetime.datetime.now().isoformat(),
+            "completed_at": datetime.datetime.now().isoformat(),
+            "message": "대본 생성이 완료되었습니다."
         }, timeout=2000)  # 2000초 동안 캐시
         logger.info(f"💾 [CACHE] Redis 대본 캐싱 완료 - Key: {script_cache_key}")
         
@@ -147,7 +179,7 @@ def generate_script_task(self, character_id, scene_count=3):
         # Redis에서 완전한 대본 데이터 가져오기
         full_script_data = script_cache.get(script_cache_key)
         
-        notify_script_completed(character_id, task_id, {
+        notify_script_completed(script_id, {
             "script_id": script_id,
             "character_id": character_id,
             "character_name": character.characterName,
@@ -186,8 +218,9 @@ def generate_script_task(self, character_id, scene_count=3):
         }
         script_cache.set(task_key, error_data, timeout=3600)
         
-        # 📡 실시간 알림: 대본 생성 실패
-        notify_script_progress(character_id, task_id, "FAILED", **error_data)
+        # 📡 실시간 알림: 대본 생성 실패 (중복 키 제거)
+        error_data_for_notify = {k: v for k, v in error_data.items() if k not in ['status']}
+        notify_script_progress(script_id, "FAILED", **error_data_for_notify)
         
         return {"status": "error", "message": error_msg}
     
@@ -207,8 +240,9 @@ def generate_script_task(self, character_id, scene_count=3):
         }
         script_cache.set(task_key, error_data, timeout=3600)
         
-        # 📡 실시간 알림: 대본 생성 실패
-        notify_script_progress(character_id, task_id, "FAILED", **error_data)
+        # 📡 실시간 알림: 대본 생성 실패 (중복 키 제거)
+        error_data_for_notify = {k: v for k, v in error_data.items() if k not in ['status']}
+        notify_script_progress(script_id, "FAILED", **error_data_for_notify)
         
         import traceback
         logger.error(f"❌ [ERROR] 상세 스택 트레이스:\n{traceback.format_exc()}")
@@ -342,6 +376,13 @@ def generate_characters_task(self, book_id):
         
         if not final_characters:
             raise Exception("캐릭터 추출 실패: 유효한 캐릭터가 발견되지 않았습니다.")
+        
+        # 🎭 캐릭터 10명 제한 (주인공 우선순위 유지)
+        if len(final_characters) > 10:
+            logger.info(f"📊 캐릭터 수 제한: {len(final_characters)}명 → 10명 (주인공 우선)")
+            final_characters = final_characters[:10]  # 이미 주인공 우선, 이름순으로 정렬되어 있음
+        
+        logger.info(f"✅ 최종 선택된 캐릭터 수: {len(final_characters)}명")
         
         # 5. 장면 생성 및 DB 저장
         script_cache.set(task_key, {
