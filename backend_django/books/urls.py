@@ -7,6 +7,12 @@ from characters.views import (
     CharacterGenerateAsyncView, 
     CharacterTaskStatusView
 )
+# EventStream views import
+from .eventstream_views import (
+    book_processing_eventstream,
+    character_generation_eventstream,
+    script_generation_eventstream
+)
 
 urlpatterns = [
     path('text', BookTextUploadView.as_view()), # 책 텍스트 업로드 API
@@ -24,6 +30,10 @@ urlpatterns = [
     path('<int:book_id>/characters', CharacterConditionalCreateOrListView.as_view()), # 캐릭터 조회/생성 (동기)
     path('<int:book_id>/characters/async', CharacterGenerateAsyncView.as_view()), # 캐릭터 생성 (비동기)
     path('<int:book_id>/characters/tasks/<str:task_id>/status', CharacterTaskStatusView.as_view()), # 캐릭터 생성 상태 확인
+
+    # === 실시간 알림 (EventStream) ===
+    path('<int:book_id>/eventstream/processing', book_processing_eventstream), # 책 처리 상태
+    path('<int:book_id>/eventstream/characters', character_generation_eventstream), # 캐릭터 생성 상태
 
     # path('<int:book_id>/characters', BookCharactersView.as_view()), # 기존 API (deprecated)
 

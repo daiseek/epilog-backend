@@ -1,4 +1,4 @@
-Django>=4.0,<5.0
+Django>=5.0,<6.0
 mysqlclient
 django-environ
 python-dotenv
@@ -22,4 +22,10 @@ drf-yasg>=1.21.7
 django-cors-headers>=3.13.0
 celery==5.3.6
 redis==5.0.4
-django-eventstream
+django-eventstream==5.2.0  # SSE 라이브러리
+daphne>=4.0.0  # ASGI 서버 (SSE 지원)
+uvicorn>=0.18.0  # ASGI 서버 대안
+channels
+channels-redis
+
+channels_rabbitmq
