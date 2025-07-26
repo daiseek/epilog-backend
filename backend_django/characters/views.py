@@ -321,7 +321,7 @@ class ScriptGenerateAsyncView(APIView):
                 "script_id": script_id,  # 🔑 클라이언트가 즉시 받을 script_id
                 "character_id": character_id,
                 "character_name": character.characterName,
-                "scene_count": scene_count,
+                # "scene_count": scene_count,
                 "message": f"대본 생성이 시작되었습니다. Script ID: {script_id} (영상 생성에 사용 가능)"
             }, status=202)  # 202 Accepted
 
