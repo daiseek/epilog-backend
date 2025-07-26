@@ -1,2 +1,0 @@
-## Gemini Added Memories
-- 사용자는 Django 백엔드(Celery, Redis, RabbitMQ, MySQL 사용)에서 Google Veo 3 API로 비디오를 생성하며, GCS와 AWS S3에 파일을 저장합니다. 개발환경에서는 docker-compose.dev.yml을 사용하며, env파일명은 .env.dev입니다. 모든 대답은 한글로 합니다.
