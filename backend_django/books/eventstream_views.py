@@ -159,6 +159,21 @@ def character_generation_eventstream(request, book_id):
         
         if task_status == 'COMPLETED':
             # ✅ 완료된 작업: 즉시 완료 데이터 반환
+            # 캐릭터 데이터에서 불필요한 내부 처리 정보 제거
+            raw_characters = task_data.get('characters', [])
+            cleaned_characters = []
+            for char in raw_characters:
+                cleaned_char = {
+                    'id': char.get('id'),
+                    'characterName': char.get('characterName'),
+                    'isMain': char.get('isMain'),
+                    'age': char.get('age'),
+                    'gender': char.get('gender'),
+                    'characterDescription': char.get('characterDescription')
+                    # discoveryCount, chunkSources, scenes 제외
+                }
+                cleaned_characters.append(cleaned_char)
+            
             return JsonResponse({
                 'success': True,
                 'status': 'COMPLETED',
@@ -167,7 +182,7 @@ def character_generation_eventstream(request, book_id):
                 'book_id': book_id,
                 'book_title': task_data.get('book_title'),
                 'total_characters': task_data.get('total_characters', 0),
-                'characters': task_data.get('characters', []),
+                'characters': cleaned_characters,
                 'completed_at': task_data.get('completed_at'),
                 'processing_stats': task_data.get('processing_stats', {}),
                 'note': '캐릭터 생성이 완료되어 실시간 스트림이 아닌 완료 데이터를 반환합니다.'
@@ -341,12 +356,26 @@ def notify_character_progress(book_id, task_id, step, progress_data):
 
 def notify_character_completed(book_id, task_id, characters):
     """캐릭터 생성 완료 알림"""
+    # 캐릭터 데이터에서 불필요한 내부 처리 정보 제거
+    cleaned_characters = []
+    for char in characters:
+        cleaned_char = {
+            'id': char.get('id'),
+            'characterName': char.get('characterName'),
+            'isMain': char.get('isMain'),
+            'age': char.get('age'),
+            'gender': char.get('gender'),
+            'characterDescription': char.get('characterDescription')
+            # discoveryCount, chunkSources, scenes 제외
+        }
+        cleaned_characters.append(cleaned_char)
+    
     event_data = {
         'task_id': task_id,
         'book_id': book_id,
         'status': 'COMPLETED',
         'progress_percentage': 100,
-        'characters': characters,
+        'characters': cleaned_characters,
         'message': '캐릭터 생성이 완료되었습니다!'
     }
     

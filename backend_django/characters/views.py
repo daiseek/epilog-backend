@@ -71,8 +71,9 @@ class CharacterConditionalCreateOrListView(APIView):
 
         existing_characters = Character.objects.filter(book=book, is_deleted=False)
         if existing_characters.exists():
-            # print(f"✅ 기존 캐릭터 {existing_characters.count()}개 발견, 목록 반환")
-            serializer = CharacterSerializer(existing_characters, many=True)
+            # print(f"✅ 기존 캐릭터 {existing_characters.count()}개 발견, 목록 반환 (scenes 제외)")
+            from .serializers import CharacterSimpleSerializer
+            serializer = CharacterSimpleSerializer(existing_characters, many=True)
             return Response(serializer.data, status=200)
 
         # Gemini API 호출로 캐릭터 생성 (새로운 방식)
@@ -477,9 +478,9 @@ class CharacterGenerateAsyncView(APIView):
         # 🔄 조건부 생성: 기존 캐릭터 존재 여부 확인
         existing_characters = Character.objects.filter(book=book, is_deleted=False)
         if existing_characters.exists():
-            print(f"✅ 기존 캐릭터 {existing_characters.count()}개 발견, 목록 반환")
-            from .serializers import CharacterSerializer
-            serializer = CharacterSerializer(existing_characters, many=True)
+            print(f"✅ 기존 캐릭터 {existing_characters.count()}개 발견, 목록 반환 (scenes 제외)")
+            from .serializers import CharacterSimpleSerializer
+            serializer = CharacterSimpleSerializer(existing_characters, many=True)
             return Response({
                 "message": f"이미 {existing_characters.count()}개의 캐릭터가 존재합니다.",
                 "book_id": book_id,

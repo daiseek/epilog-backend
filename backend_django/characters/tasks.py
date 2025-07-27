@@ -457,10 +457,10 @@ def generate_characters_task(self, book_id):
                     'isMain': character.isMain,
                     'age': character.age,
                     'gender': character.gender,
-                    'characterDescription': character.characterDescription,
-                    'scenes': scene_data,
-                    'discoveryCount': char_data.get('discoveryCount', 1),
-                    'chunkSources': char_data.get('chunkSources', [])
+                    'characterDescription': character.characterDescription
+                    # 'scenes': scene_data,  # EventStream에서는 scenes 제외 (응답 크기 최적화)
+                    # 'discoveryCount': char_data.get('discoveryCount', 1),  # 내부 처리 정보 제외
+                    # 'chunkSources': char_data.get('chunkSources', [])      # 내부 처리 정보 제외
                 })
                 
                 logger.info(f"✅ 캐릭터 '{character.characterName}' 생성 완료 - {len(scene_data)}개 장면")
