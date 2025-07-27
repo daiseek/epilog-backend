@@ -6,7 +6,7 @@ from .models import Book
 from .pdf_utils import extract_text_from_pdf
 from .gemini_client import summarize_with_gemini
 from .s3_client import upload_to_s3
-from .eventstream_views import notify_book_progress
+from .eventstream_views import notify_book_progress, notify_book_completed
 
 @shared_task(bind=True)
 def process_book_pdf_task(self, book_id, pdf_file_content, pdf_file_name):
@@ -89,6 +89,14 @@ def process_book_pdf_task(self, book_id, pdf_file_content, pdf_file_name):
                                message=f'책 "{book.title}" 처리가 완료되었습니다!',
                                content=summary,
                                pdf_url=pdf_url)
+            
+            # 🎉 새로운 스트리밍 API용 완료 알림
+            notify_book_completed(book_id, {
+                'title': book.title,
+                'content': summary,
+                'pdf_url': pdf_url,
+                'timestamp': book.updated_at.isoformat() if book.updated_at else None
+            })
             
             print(f"✅ 책 PDF 처리 완료 - ID: {book_id}")
             

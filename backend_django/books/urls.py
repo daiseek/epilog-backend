@@ -13,6 +13,11 @@ from .eventstream_views import (
     character_generation_eventstream,
     script_generation_eventstream
 )
+# Streaming 통합 views import
+from .streaming_views import (
+    BookPdfUploadStreamView,
+    CharacterGenerateStreamView
+)
 
 urlpatterns = [
     path('text', BookTextUploadView.as_view()), # 책 텍스트 업로드 API
@@ -22,6 +27,9 @@ urlpatterns = [
     path('pdf/async', BookFromPdfAsyncView.as_view()), # 책 PDF 업로드 API (비동기)
     # path('<int:book_id>/status', BookStatusView.as_view()),  # 처리 상태 확인 API (Polling 방식 - 더 이상 사용 안함)
 
+    # === 🚀 새로운 스트리밍 통합 API (POST + SSE) ===
+    path('pdf/stream', BookPdfUploadStreamView.as_view()), # 책 PDF 업로드 + 실시간 스트리밍
+
     path('official', BookOfficialView.as_view()), # 공용책 정보 API
 
     path('<int:book_id>/videos', BookVideosView.as_view()), # 책 동영상 API
@@ -30,6 +38,9 @@ urlpatterns = [
     path('<int:book_id>/characters', CharacterConditionalCreateOrListView.as_view()), # 캐릭터 조회/생성 (동기)
     path('<int:book_id>/characters/async', CharacterGenerateAsyncView.as_view()), # 캐릭터 생성 (비동기)
     # path('<int:book_id>/characters/tasks/<str:task_id>/status', CharacterTaskStatusView.as_view()), # 캐릭터 생성 상태 확인 (Polling 방식 - 더 이상 사용 안함)
+
+    # === 🚀 새로운 스트리밍 통합 API (POST + SSE) ===
+    path('<int:book_id>/characters/stream', CharacterGenerateStreamView.as_view()), # 캐릭터 생성 + 실시간 스트리밍
 
     # === 실시간 알림 (EventStream) ===
     path('<int:book_id>/eventstream/processing', book_processing_eventstream), # 책 처리 상태

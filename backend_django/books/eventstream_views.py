@@ -340,6 +340,22 @@ def notify_book_progress(book_id, status, **extra_data):
     logger.info(f'📡 책 {book_id} 상태 알림: {status}')
 
 
+def notify_book_completed(book_id, book_data):
+    """책 처리 완료 알림 (새로운 스트리밍 API용)"""
+    event_data = {
+        'book_id': book_id,
+        'status': 'COMPLETED',
+        'title': book_data.get('title'),
+        'content': book_data.get('content'),
+        'pdf_url': book_data.get('pdf_url'),
+        'message': f'책 "{book_data.get("title", "")}" 처리가 완료되었습니다!',
+        'timestamp': book_data.get('timestamp')
+    }
+    
+    send_event(f'book-{book_id}', 'completed', event_data)
+    logger.info(f'🎉 책 처리 완료: {book_id}')
+
+
 def notify_character_progress(book_id, task_id, step, progress_data):
     """캐릭터 생성 진행 상황 실시간 알림"""
     event_data = {
