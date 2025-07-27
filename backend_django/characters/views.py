@@ -338,77 +338,77 @@ class ScriptGenerateAsyncView(APIView):
             }, status=500)
 
 
-''' 대본 생성 상태 확인 기능 (Redis 기반) '''
-class ScriptTaskStatusView(APIView):
-    """
-    대본 생성 작업 상태를 확인하는 API (Redis 기반)
-    """
-    permission_classes = [IsAuthenticated]
+# ''' 대본 생성 상태 확인 기능 (Polling 방식 - 더 이상 사용 안함) '''
+# class ScriptTaskStatusView(APIView):
+#     """
+#     대본 생성 작업 상태를 확인하는 API (Redis 기반)
+#     """
+#     permission_classes = [IsAuthenticated]
 
-    @swagger_auto_schema(
-        operation_description="""대본 생성 작업 상태를 확인합니다. (JWT 인증 필요)
+#     @swagger_auto_schema(
+#         operation_description="""대본 생성 작업 상태를 확인합니다. (JWT 인증 필요)
         
-        처리 상태:
-        - PROCESSING: 처리 진행 중  
-        - COMPLETED: 처리 완료 (script_id로 Redis에서 대본 조회 가능)
-        - FAILED: 처리 실패
-        """,
-        responses={
-            200: ScriptTaskStatusResponseSerializer,
-            404: CharacterErrorResponseSerializer,
-            401: openapi.Response(description="인증 필요")
-        },
-        tags=['대본 생성']
-    )
-    def get(self, request, task_id):
-        script_cache = caches['script_cache']
-        task_key = f"task:{task_id}"
+#         처리 상태:
+#         - PROCESSING: 처리 진행 중  
+#         - COMPLETED: 처리 완료 (script_id로 Redis에서 대본 조회 가능)
+#         - FAILED: 처리 실패
+#         """,
+#         responses={
+#             200: ScriptTaskStatusResponseSerializer,
+#             404: CharacterErrorResponseSerializer,
+#             401: openapi.Response(description="인증 필요")
+#         },
+#         tags=['대본 생성']
+#     )
+#     def get(self, request, task_id):
+#         script_cache = caches['script_cache']
+#         task_key = f"task:{task_id}"
         
-        try:
-            # Redis에서 태스크 상태 조회
-            task_data = script_cache.get(task_key)
+#         try:
+#             # Redis에서 태스크 상태 조회
+#             task_data = script_cache.get(task_key)
             
-            if not task_data:
-                return Response({
-                    "error": "태스크를 찾을 수 없습니다. 태스크가 만료되었거나 존재하지 않습니다."
-                }, status=404)
+#             if not task_data:
+#                 return Response({
+#                     "error": "태스크를 찾을 수 없습니다. 태스크가 만료되었거나 존재하지 않습니다."
+#                 }, status=404)
             
-            # 응답 데이터 구성
-            response_data = {
-                "task_id": task_id,
-                "character_id": task_data.get("character_id"),
-                "character_name": task_data.get("character_name"),
-                "status": task_data.get("status"),
-                "script_id": task_data.get("script_id"),
-                "scene_count": task_data.get("scene_count"),
-                "error_message": task_data.get("error_message"),
-                "message": task_data.get("message"),
-                "started_at": task_data.get("started_at"),
-                "completed_at": task_data.get("completed_at"),
-                "failed_at": task_data.get("failed_at")
-            }
+#             # 응답 데이터 구성
+#             response_data = {
+#                 "task_id": task_id,
+#                 "character_id": task_data.get("character_id"),
+#                 "character_name": task_data.get("character_name"),
+#                 "status": task_data.get("status"),
+#                 "script_id": task_data.get("script_id"),
+#                 "scene_count": task_data.get("scene_count"),
+#                 "error_message": task_data.get("error_message"),
+#                 "message": task_data.get("message"),
+#                 "started_at": task_data.get("started_at"),
+#                 "completed_at": task_data.get("completed_at"),
+#                 "failed_at": task_data.get("failed_at")
+#             }
             
-            # 🎬 완료된 경우 대본 내용도 함께 반환
-            if task_data.get("status") == "COMPLETED" and task_data.get("script_id"):
-                script_id = task_data.get("script_id")
-                script_key = f"script:{script_id}"
-                script_data = script_cache.get(script_key)
+#             # 🎬 완료된 경우 대본 내용도 함께 반환
+#             if task_data.get("status") == "COMPLETED" and task_data.get("script_id"):
+#                 script_id = task_data.get("script_id")
+#                 script_key = f"script:{script_id}"
+#                 script_data = script_cache.get(script_key)
                 
-                if script_data:
-                    response_data["scenes"] = script_data.get("scenes", [])
-                    print(f"📋 대본 내용도 함께 반환 - Script ID: {script_id}, 장면 수: {len(script_data.get('scenes', []))}")
-                else:
-                    print(f"⚠️ 대본 데이터를 찾을 수 없음 - Script ID: {script_id}")
-                    response_data["error_message"] = "대본 데이터가 만료되었거나 찾을 수 없습니다."
+#                 if script_data:
+#                     response_data["scenes"] = script_data.get("scenes", [])
+#                     print(f"📋 대본 내용도 함께 반환 - Script ID: {script_id}, 장면 수: {len(script_data.get('scenes', []))}")
+#                 else:
+#                     print(f"⚠️ 대본 데이터를 찾을 수 없음 - Script ID: {script_id}")
+#                     response_data["error_message"] = "대본 데이터가 만료되었거나 찾을 수 없습니다."
             
-            print(f"📊 대본 작업 상태 조회 - Task ID: {task_id}, 상태: {task_data.get('status')}")
-            return Response(response_data, status=200)
+#             print(f"📊 대본 작업 상태 조회 - Task ID: {task_id}, 상태: {task_data.get('status')}")
+#             return Response(response_data, status=200)
             
-        except Exception as e:
-            print(f"[ERROR] 상태 조회 중 오류: {str(e)}")
-            return Response({
-                "error": f"상태 조회 중 오류가 발생했습니다: {str(e)}"
-            }, status=500)
+#         except Exception as e:
+#             print(f"[ERROR] 상태 조회 중 오류: {str(e)}")
+#             return Response({
+#                 "error": f"상태 조회 중 오류가 발생했습니다: {str(e)}"
+#             }, status=500)
 
 
 ''' 캐릭터 생성 기능 (비동기 버전) '''
@@ -502,7 +502,7 @@ class CharacterGenerateAsyncView(APIView):
                 "task_id": task.id,
                 "book_id": book_id,
                 "book_title": book.title,
-                "message": "캐릭터 생성이 시작되었습니다. 처리 상태는 GET /characters/character-tasks/{task_id}/status 로 확인 가능합니다."
+                "message": "캐릭터 생성이 시작되었습니다. 실시간 처리 상태는 EventStream을 통해 확인 가능합니다: GET /books/{book_id}/eventstream/characters"
             }, status=202)  # 202 Accepted
 
         except Exception as e:
@@ -518,87 +518,87 @@ class CharacterGenerateAsyncView(APIView):
             }, status=500)
 
 
-''' 캐릭터 생성 상태 확인 기능 (Redis 기반) '''
-class CharacterTaskStatusView(APIView):
-    """
-    캐릭터 생성 작업 상태를 확인하는 API (Redis 기반)
-    """
-    permission_classes = [IsAuthenticated]
+# ''' 캐릭터 생성 상태 확인 기능 (Polling 방식 - 더 이상 사용 안함) '''
+# class CharacterTaskStatusView(APIView):
+#     """
+#     캐릭터 생성 작업 상태를 확인하는 API (Redis 기반)
+#     """
+#     permission_classes = [IsAuthenticated]
 
-    @swagger_auto_schema(
-        operation_description="""캐릭터 생성 작업 상태를 확인합니다. (JWT 인증 필요)
+#     @swagger_auto_schema(
+#         operation_description="""캐릭터 생성 작업 상태를 확인합니다. (JWT 인증 필요)
         
-        처리 상태 및 단계:
-        - PROCESSING: 처리 진행 중
-          - initialization: 초기화
-          - pdf_processing: PDF 다운로드 및 청킹
-          - character_extraction: 청크별 캐릭터 추출
-          - character_merging: 캐릭터 병합 및 중복 제거
-          - scene_generation: 장면 생성 및 DB 저장
-        - COMPLETED: 처리 완료 (생성된 캐릭터 목록 포함)
-        - FAILED: 처리 실패
+#         처리 상태 및 단계:
+#         - PROCESSING: 처리 진행 중
+#           - initialization: 초기화
+#           - pdf_processing: PDF 다운로드 및 청킹
+#           - character_extraction: 청크별 캐릭터 추출
+#           - character_merging: 캐릭터 병합 및 중복 제거
+#           - scene_generation: 장면 생성 및 DB 저장
+#         - COMPLETED: 처리 완료 (생성된 캐릭터 목록 포함)
+#         - FAILED: 처리 실패
         
-        진행률 정보:
-        - 각 단계별 진행 상황 (청크 처리, 캐릭터 생성 등)
-        - 현재 처리 중인 항목 정보
-        - 예상 완료 시간 추정 가능
-        """,
-        responses={
-            200: CharacterTaskStatusResponseSerializer,
-            404: CharacterErrorResponseSerializer,
-            401: openapi.Response(description="인증 필요")
-        },
-        tags=['캐릭터 관리']
-    )
-    def get(self, request, task_id):
-        script_cache = caches['script_cache']
-        task_key = f"character_task:{task_id}"
+#         진행률 정보:
+#         - 각 단계별 진행 상황 (청크 처리, 캐릭터 생성 등)
+#         - 현재 처리 중인 항목 정보
+#         - 예상 완료 시간 추정 가능
+#         """,
+#         responses={
+#             200: CharacterTaskStatusResponseSerializer,
+#             404: CharacterErrorResponseSerializer,
+#             401: openapi.Response(description="인증 필요")
+#         },
+#         tags=['캐릭터 관리']
+#     )
+#     def get(self, request, task_id):
+#         script_cache = caches['script_cache']
+#         task_key = f"character_task:{task_id}"
         
-        try:
-            # Redis에서 태스크 상태 조회
-            task_data = script_cache.get(task_key)
+#         try:
+#             # Redis에서 태스크 상태 조회
+#             task_data = script_cache.get(task_key)
             
-            if not task_data:
-                return Response({
-                    "error": "태스크를 찾을 수 없습니다. 태스크가 만료되었거나 존재하지 않습니다."
-                }, status=404)
+#             if not task_data:
+#                 return Response({
+#                     "error": "태스크를 찾을 수 없습니다. 태스크가 만료되었거나 존재하지 않습니다."
+#                 }, status=404)
             
-            # 응답 데이터 구성
-            response_data = {
-                "task_id": task_id,
-                "book_id": task_data.get("book_id"),
-                "book_title": task_data.get("book_title"),
-                "status": task_data.get("status"),
-                "step": task_data.get("step"),
-                "message": task_data.get("message"),
+#             # 응답 데이터 구성
+#             response_data = {
+#                 "task_id": task_id,
+#                 "book_id": task_data.get("book_id"),
+#                 "book_title": task_data.get("book_title"),
+#                 "status": task_data.get("status"),
+#                 "step": task_data.get("step"),
+#                 "message": task_data.get("message"),
                 
-                # 진행률 정보
-                "total_chunks": task_data.get("total_chunks"),
-                "processed_chunks": task_data.get("processed_chunks"),
-                "current_chunk": task_data.get("current_chunk"),
-                "total_characters": task_data.get("total_characters"),
-                "processed_characters": task_data.get("processed_characters"),
-                "current_character": task_data.get("current_character"),
+#                 # 진행률 정보
+#                 "total_chunks": task_data.get("total_chunks"),
+#                 "processed_chunks": task_data.get("processed_chunks"),
+#                 "current_chunk": task_data.get("current_chunk"),
+#                 "total_characters": task_data.get("total_characters"),
+#                 "processed_characters": task_data.get("processed_characters"),
+#                 "current_character": task_data.get("current_character"),
                 
-                # 시간 정보
-                "started_at": task_data.get("started_at"),
-                "completed_at": task_data.get("completed_at"),
-                "failed_at": task_data.get("failed_at"),
-                "error_message": task_data.get("error_message")
-            }
+#                 # 시간 정보
+#                 "started_at": task_data.get("started_at"),
+#                 "completed_at": task_data.get("completed_at"),
+#                 "failed_at": task_data.get("failed_at"),
+#                 "error_message": task_data.get("error_message")
+#             }
             
-            # 🎭 완료된 경우 캐릭터 목록과 통계도 함께 반환
-            if task_data.get("status") == "COMPLETED":
-                response_data["characters"] = task_data.get("characters", [])
-                response_data["processing_stats"] = task_data.get("processing_stats", {})
-                print(f"🎭 캐릭터 목록도 함께 반환 - Task ID: {task_id}, 캐릭터 수: {len(task_data.get('characters', []))}")
+#             # 🎭 완료된 경우 캐릭터 목록과 통계도 함께 반환
+#             if task_data.get("status") == "COMPLETED":
+#                 response_data["characters"] = task_data.get("characters", [])
+#                 response_data["processing_stats"] = task_data.get("processing_stats", {})
+#                 print(f"🎭 캐릭터 목록도 함께 반환 - Task ID: {task_id}, 캐릭터 수: {len(task_data.get('characters', []))}")
             
-            print(f"📊 캐릭터 작업 상태 조회 - Task ID: {task_id}, 상태: {task_data.get('status')}, 단계: {task_data.get('step')}")
-            return Response(response_data, status=200)
+#             print(f"📊 캐릭터 작업 상태 조회 - Task ID: {task_id}, 상태: {task_data.get('status')}, 단계: {task_data.get('step')}")
+#             return Response(response_data, status=200)
             
-        except Exception as e:
-            print(f"[ERROR] 상태 조회 중 오류: {str(e)}")
-            return Response({
-                "error": f"상태 조회 중 오류가 발생했습니다: {str(e)}"
-            }, status=500)
+#         except Exception as e:
+#             print(f"[ERROR] 상태 조회 중 오류: {str(e)}")
+#             return Response({
+#                 "error": f"상태 조회 중 오류가 발생했습니다: {str(e)}"
+#             }, status=500)
 
