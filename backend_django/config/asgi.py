@@ -8,8 +8,7 @@ https://docs.djangoproject.com/en/5.2/howto/deployment/asgi/
 """
 
 import os
-
-from django.core.asgi import get_asgi_application
+import django
 
 # 환경변수에 따라 설정 파일 선택
 env = os.environ.get('DJANGO_ENV', 'dev')  # 기본값은 dev
@@ -19,4 +18,9 @@ if env == 'prod':
 else:
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings_dev')
 
+django.setup()
+
+from django.core.asgi import get_asgi_application
+
+# Django-eventstream 5.2.0은 일반 Django URL 라우팅으로 충분함
 application = get_asgi_application()

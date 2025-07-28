@@ -31,6 +31,11 @@ environ.Env.read_env(
     env_file=os.path.join(BASE_DIR, '.env.dev')
 )
 
+# 레디스 환경 설정 호출
+REDIS_HOST = env("REDIS_HOST", default="backend-redis")
+REDIS_PORT = env("REDIS_PORT", default="6379")
+
+
 # False if not in os.environ because of casting above
 DEBUG = env.bool("DEBUG", default=True) # 개발환경에서만 사용
 
@@ -106,7 +111,9 @@ INSTALLED_APPS = [
     'storages', # Django Storages 추가
     'drf_yasg', # Django REST framework Swagger 추가
     'corsheaders', # CORS 허용 허락
+
     'django_eventstream', # SSE 실시간 알림
+    'channels', # Django Channels 추가
 
     'django.contrib.admin',
     'django.contrib.auth',
@@ -129,9 +136,13 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django_prometheus.middleware.PrometheusAfterMiddleware'
 ]
-CORS_ALLOW_ALL_ORIGINS = True
+
 STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 STATIC_URL='static/'
+
+CSRF_TRUSTED_ORIGINS = ["http://localhost:5173"]
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
 
 ROOT_URLCONF = 'config.urls'
 
@@ -194,7 +205,7 @@ CACHES = {
     # 기본 캐시 설정 - Celery 작업 결과물 저장
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': f'redis://{env("REDIS_HOST", default="backend-redis")}:{env("REDIS_PORT", default="6379")}/1',
+        'LOCATION': f'redis://{env("REDIS_HOST", default="backend-redis")}:{env("REDIS_PORT", default="6379")}/0',
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
         }
@@ -209,6 +220,37 @@ CACHES = {
         }    
     }
 }
+
+# EventStream 설정
+# 참고: DjangoModelStorage는 DB를, RedisStorage는 Redis를 이벤트 저장소로 사용합니다.
+# RedisStorage가 더 빠르고 확장성이 좋습니다.
+EVENTSTREAM_STORAGE_CLASS = "django_eventstream.storage.RedisStorage"
+print(f"🔍 [SETTINGS] EventStream Redis 스토리지 사용")
+
+# Celery와 같은 외부 프로세스에서 이벤트를 보내기 위해 GRIP 프록시 모드를 비활성화합니다.
+EVENTSTREAM_ENABLE_GRIP = False
+
+# RedisStorage를 위한 연결 설정 (DB 3번 사용)
+EVENTSTREAM_STORAGE_CONNECTION = {
+    'host': env("REDIS_HOST", default="backend-redis"),
+    'port': env.int("REDIS_PORT", default=6379),
+    'db': 3,
+}
+
+# DjangoModelStorage 사용 시 필요한 폴링 설정 (RedisStorage에서는 불필요)
+# EVENTSTREAM_POLL_TIMEOUT = 2.0  # 폴링 타임아웃 (초)
+# EVENTSTREAM_POLL_INTERVAL = 0.1  # 폴링 간격 (초)
+# EVENTSTREAM_MAX_EVENTS_PER_REQUEST = 100  # 한 번에 처리할 최대 이벤트 수
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+             "hosts": [f'redis://{env("REDIS_HOST", default="backend-redis")}:{env("REDIS_PORT", default="6379")}/0'],
+        },
+    },
+}
+
 
 
 # Password validation

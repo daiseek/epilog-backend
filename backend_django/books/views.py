@@ -1,4 +1,10 @@
-from django.shortcuts import render
+"""Books 앱 views.py"""
+
+import logging
+import asyncio
+import threading
+from datetime import datetime
+from django.core.cache import caches
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -18,45 +24,55 @@ from .serializers import (
     BookAsyncUploadResponseSerializer,
     BookStatusResponseSerializer
 )
+from .tasks import process_book_pdf_task
+
 from .models import Book
 from veo3Video.models import Video
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 # Create your views here.
 
+from .models import Book
+from .serializers import BookPdfUploadSerializer
+from characters.models import Character
+from .tasks import process_book_pdf_task
+from .eventstream_views import push_event
+from rest_framework.permissions import IsAuthenticated
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, render
 
 # 책 입력 API 2가지를 정의함
-''' 책 텍스트로 입력시 book을 생성하는 API '''
-class BookTextUploadView(APIView):
-    permission_classes = [IsAuthenticated]  # JWT 인증 필요
+# ''' 책 텍스트로 입력시 book을 생성하는 API '''
+# class BookTextUploadView(APIView):
+#     permission_classes = [IsAuthenticated]  # JWT 인증 필요
 
-    @swagger_auto_schema(
-        operation_description="텍스트로 책을 생성합니다. (JWT 인증 필요)",
-        request_body=BookCreateSerializer,
-        responses={
-            201: BookSuccessResponseSerializer,
-            400: BookErrorResponseSerializer,
-            401: openapi.Response(description="인증 필요")
-        },
-        tags=['책 관리']
-    )
-    def post(self, request):
-        serializer = BookCreateSerializer(data=request.data)
-        if serializer.is_valid():
-            # 책 생성 (user 외래키 없음)
-            book = serializer.save()
-            return Response({
-                "book_id": book.id,
-                "title": book.title,
-                "content": book.content,
-                "book_url": None
-            }, status=status.HTTP_201_CREATED)
-        return Response({
-            "status": "error",
-            "error_code": 400,
-            "message": "입력한 정보 형식이 올바르지 않습니다.",
-            "details": serializer.errors
-        }, status=status.HTTP_400_BAD_REQUEST)
+#     @swagger_auto_schema(
+#         operation_description="텍스트로 책을 생성합니다. (JWT 인증 필요)",
+#         request_body=BookCreateSerializer,
+#         responses={
+#             201: BookSuccessResponseSerializer,
+#             400: BookErrorResponseSerializer,
+#             401: openapi.Response(description="인증 필요")
+#         },
+#         tags=['책 관리']
+#     )
+#     def post(self, request):
+#         serializer = BookCreateSerializer(data=request.data)
+#         if serializer.is_valid():
+#             # 책 생성 (user 외래키 없음)
+#             book = serializer.save()
+#             return Response({
+#                 "book_id": book.id,
+#                 "title": book.title,
+#                 "content": book.content,
+#                 "book_url": None
+#             }, status=status.HTTP_201_CREATED)
+#         return Response({
+#             "status": "error",
+#             "error_code": 400,
+#             "message": "입력한 정보 형식이 올바르지 않습니다.",
+#             "details": serializer.errors
+#         }, status=status.HTTP_400_BAD_REQUEST)
     
 
 
@@ -262,8 +278,7 @@ class BookFromPdfAsyncView(APIView):
             import base64
             pdf_base64 = base64.b64encode(pdf_content).decode('utf-8')
             
-            # 3. Celery 태스크 시작
-            from .tasks import process_book_pdf_task
+            # 3. Celery 태스크 시작 - Celery 호출 함수를 이용하여 작업을 명령
             task = process_book_pdf_task.delay(
                 book_id=book.id,
                 pdf_file_content=pdf_base64,
@@ -473,3 +488,34 @@ class BookCharactersView(APIView):
 #                 "error_code": 404,
 #                 "message": "책을 찾을 수 없습니다."
 #             }, status=404)
+
+
+# 🧪 SSE 테스트용 뷰 추가
+def test_sse_view(request):
+    """SSE 테스트용 간단한 뷰"""
+    if request.method == "POST":
+        task_id = request.POST.get("task_id", "test123")
+        
+        def send_test_events():
+            """백그라운드에서 테스트 이벤트 전송"""
+            import time
+            time.sleep(1)  # 1초 대기
+            push_event(task_id, "progress", {"message": "테스트 시작", "progress": 25})
+            time.sleep(2)  # 2초 대기
+            push_event(task_id, "progress", {"message": "테스트 진행 중", "progress": 75}) 
+            time.sleep(1)  # 1초 대기
+            push_event(task_id, "completed", {"message": "테스트 완료!", "result": "성공"})
+        
+        # 백그라운드 스레드에서 이벤트 전송
+        thread = threading.Thread(target=send_test_events)
+        thread.daemon = True
+        thread.start()
+        
+        return JsonResponse({
+            "message": "테스트 이벤트 전송 시작됨",
+            "task_id": task_id,
+            "sse_url": f"/events/task-{task_id}/"
+        })
+    
+    # GET 요청시 테스트 페이지 렌더링
+    return render(request, 'test_sse.html')

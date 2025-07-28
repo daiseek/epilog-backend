@@ -12,7 +12,7 @@ google-cloud-aiplatform
 google-generativeai
 boto3
 django-storages
-PyMuPDF==1.23.7
+PyMuPDF==1.24.9
 pdf2image==1.17.0
 pytesseract==0.3.10
 Pillow==10.3.0
@@ -23,7 +23,9 @@ django-cors-headers>=3.13.0
 celery==5.3.6
 flower>=2.0.1  # Celery 모니터링 웹 UI
 celery-prometheus-exporter>=1.7.0  # Celery Prometheus 메트릭 익스포터
-redis==5.0.4
-django-eventstream==5.2.0  # SSE 라이브러리
+redis==3.5.3 # SSE 라이브러리와의 호환성을 위해 다운그레이드
+django-eventstream==5.3.0 # SSE 라이브러리
 daphne>=4.0.0  # ASGI 서버 (SSE 지원)
 uvicorn>=0.18.0  # ASGI 서버 대안
+channels==3.0.5 # redis 3.x 버전과 호환되는 채널 버전으로 다운그레이드
+channels-redis==3.4.1 # channels v3 호환 redis 라이브러리

@@ -1,12 +1,20 @@
 from celery import shared_task
 import tempfile
 import os
+import base64
+import traceback
 from django.core.files.base import ContentFile
 from .models import Book
 from .pdf_utils import extract_text_from_pdf
 from .gemini_client import summarize_with_gemini
 from .s3_client import upload_to_s3
-from .eventstream_views import notify_book_progress, notify_book_completed
+from .eventstream_views import (
+    push_event
+)
+
+# Redis에 task 초기 상태 저장
+from django.core.cache import caches
+import datetime
 
 @shared_task(bind=True)
 def process_book_pdf_task(self, book_id, pdf_file_content, pdf_file_name):
@@ -19,21 +27,41 @@ def process_book_pdf_task(self, book_id, pdf_file_content, pdf_file_name):
         pdf_file_name: PDF 파일명
     """
     try:
-        # Book 인스턴스 조회
+        task_id = self.request.id
+
+         # Book 인스턴스 조회
         book = Book.objects.get(id=book_id)
         book.processing_status = 'PROCESSING'
         book.task_id = self.request.id
         book.save()
         
-        # 📡 실시간 알림: 처리 시작
-        notify_book_progress(book_id, 'PROCESSING', 
-                           title=book.title, 
-                           message='PDF 처리를 시작합니다...')
+        cache = caches['default']
         
-        print(f"📚 책 PDF 처리 시작 - ID: {book_id}, 제목: {book.title}")
+        initial_task_detail = {
+            'task_id': task_id,
+            'book_id': book_id,
+            'book_title': book.title,
+            'status': 'PROCESSING',
+            'progress': 10,
+            'step': 'pdf_processing_start',
+            'message': f'PDF 처리를 시작합니다: {book.title}',
+            'started_at': datetime.datetime.now().isoformat()
+        }
+        cache.set(f'task_detail:{task_id}', initial_task_detail, timeout=3600)
+        print("작업 진행중..") 
+
+
+        push_event(task_id, "progress", {
+        "book_id": book_id,
+        "book_title": book.title,
+        "progress": 80,
+        "step": "file_upload",
+        "message": "S3에 업로드 중입니다"
+        })
+        
+        print(f"📚 책 PDF 처리 시작 - ID: {book_id}, Task: {task_id}, 제목: {book.title}")
         
         # base64 디코딩하여 임시 파일 생성
-        import base64
         pdf_binary = base64.b64decode(pdf_file_content)
         
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_file:
@@ -42,63 +70,65 @@ def process_book_pdf_task(self, book_id, pdf_file_content, pdf_file_name):
         
         try:
             # 1. PDF 텍스트 추출
-            print("📖 PDF 텍스트 추출 시작...")
-            # 📡 실시간 알림: 텍스트 추출 시작
-            notify_book_progress(book_id, 'PROCESSING',
-                               step='text_extraction',
-                               message='PDF에서 텍스트를 추출하고 있습니다...')
+            print("PDF 텍스트 추출 시작...")
+            push_event(task_id, "progress", {
+                "book_id": book_id,
+                "book_title": book.title,
+                "progress": 30,
+                "step": "text_extraction",
+                "message": "PDF에서 텍스트를 추출 중입니다"
+            })
+
             
             # Django의 ContentFile로 변환하여 기존 함수 재사용
             with open(temp_file_path, 'rb') as f:
                 pdf_file = ContentFile(f.read(), name=pdf_file_name)
             
             extracted_text = extract_text_from_pdf(pdf_file)
-            print(f"📄 추출된 텍스트 길이: {len(extracted_text)} 문자")
+            print(f"추출된 텍스트 길이: {len(extracted_text)} 문자")
             
             # 2. Gemini 요약
-            print("🤖 Gemini API 요약 시작...")
-            # 📡 실시간 알림: AI 요약 시작
-            notify_book_progress(book_id, 'PROCESSING',
-                               step='ai_summary',
-                               message='AI가 내용을 요약하고 있습니다...')
+            print("Gemini API 요약 시작...")
+            push_event(task_id, "progress", {
+                "book_id": book_id,
+                "book_title": book.title,
+                "progress": 60,
+                "step": "ai_summary",
+                "message": "AI가 요약을 생성 중입니다"
+            })
+
             
             summary = summarize_with_gemini(extracted_text)
-            print(f"📝 요약 완료: {len(summary)} 문자")
+            print(f"요약 완료: {len(summary)} 문자")
             
             # 3. S3 업로드
-            print("☁️ S3 업로드 시작...")
-            # 📡 실시간 알림: 파일 업로드
-            notify_book_progress(book_id, 'PROCESSING',
-                               step='file_upload',
-                               message='클라우드에 파일을 업로드하고 있습니다...')
+            print("S3 업로드 시작...")
+            push_event(task_id, "progress", {
+                "book_id": book_id,
+                "book_title": book.title,
+                "progress": 80,
+                "step": "file_upload",
+                "message": "S3에 업로드 중입니다"
+            })
             
             pdf_file.seek(0)  # 파일 포인터 초기화
             pdf_url = upload_to_s3(pdf_file)
-            print(f"🔗 S3 업로드 완료: {pdf_url}")
-            
-            # 4. DB 업데이트
+            print(f"S3 업로드 완료: {pdf_url}")
             book.content = summary
             book.pdf_url = pdf_url
             book.processing_status = 'COMPLETED'
             book.error_message = None
             book.save()
-            
-            # 📡 실시간 알림: 처리 완료
-            notify_book_progress(book_id, 'COMPLETED',
-                               step='completed',
-                               message=f'책 "{book.title}" 처리가 완료되었습니다!',
-                               content=summary,
-                               pdf_url=pdf_url)
-            
-            # 🎉 새로운 스트리밍 API용 완료 알림
-            notify_book_completed(book_id, {
-                'title': book.title,
-                'content': summary,
-                'pdf_url': pdf_url,
-                'timestamp': book.updated_at.isoformat() if book.updated_at else None
+
+            push_event(task_id, "completed", {
+                "book_id": book_id,
+                "book_title": book.title,
+                "pdf_url": pdf_url,
+                "content_length": len(summary),
+                "message": "PDF 요약 및 업로드가 완료되었습니다."
             })
-            
-            print(f"✅ 책 PDF 처리 완료 - ID: {book_id}")
+
+            print(f"✅ 책 PDF 처리 완료 - ID: {book_id}, Task: {task_id}")
             
             return {
                 "status": "success",
@@ -130,16 +160,14 @@ def process_book_pdf_task(self, book_id, pdf_file_content, pdf_file_name):
             book.processing_status = 'FAILED'
             book.error_message = error_msg
             book.save()
-            
-            # 📡 실시간 알림: 처리 실패
-            notify_book_progress(book_id, 'FAILED',
-                               step='failed',
-                               message=f'책 처리 중 오류가 발생했습니다: {error_msg}',
-                               error_message=error_msg)
         except:
             pass
+        push_event(self.request.id, "error", {
+            "book_id": book_id,
+            "error_message": error_msg,
+            "message": "PDF 처리 중 오류 발생"
+        })
         
-        import traceback
         print(f"❌ 상세 스택 트레이스:\n{traceback.format_exc()}")
         
         # Celery에 실패 상태 전달

@@ -16,7 +16,7 @@ from .pdf_chunker import (
     prioritize_character_chunks
 )
 from books.models import Book
-from books.eventstream_views import notify_character_progress, notify_character_completed, notify_script_progress, notify_script_completed
+# from books.eventstream_views import notify_character_progress, notify_character_completed, notify_script_progress, notify_script_completed
 import datetime
 
 # Celery 전용 로거 설정
