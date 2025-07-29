@@ -26,7 +26,7 @@ load_dotenv()
 GOOGLE_CLOUD_GCS_BUCKET = os.getenv("GOOGLE_CLOUD_GCS_BUCKET")
 
 @shared_task
-def create_video_for_scene(character_id, prompt, title, channel_id):
+def create_video_for_scene(character_id, prompt, title, channel_id, user_id=None):
     """
     Celery 작업으로 비디오 생성을 비동기적으로 처리하고 SSE로 진행 상황을 알립니다.
     """
@@ -52,7 +52,7 @@ def create_video_for_scene(character_id, prompt, title, channel_id):
             video_uri=final_gcs_uri,
             prompt=prompt,
             title=title,
-            user_id=None, # user_id는 필요에 따라 설정
+            user_id=user_id, # user_id는 필요에 따라 설정
             character_id=character_id,
             is_combined=False # 개별 장면 영상으로 표시
         )

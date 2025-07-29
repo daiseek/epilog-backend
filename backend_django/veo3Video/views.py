@@ -89,15 +89,15 @@ class TextToVideoView(APIView):
 
         # [JWT 통합 예정] 여기에 JWT 방식으로 사용자 ID를 받아오는 기능 개발
         # 현재는 user_id를 None으로 설정하여 익명 사용자로 처리합니다.
-        # 실제 구현 시에는 request.user.id 또는 JWT 토큰에서 사용자 ID를 추출하여 사용합니다.
-        user_id = None
+        # 실제 구현 시에는 request.user.id 또는 JWT 토큰에서 사용자 ID를 추출하여 사용합니다。
+        user_id = request.user.id if request.user.is_authenticated else None
 
         # 필수 필드(prompt, title)가 누락되었는지 확인합니다.
         if not prompt or not title:
-            # 필수 필드가 누락된 경우 400 Bad Request 응답을 반환합니다.
+            # 필수 필드가 누락된 경우 400 Bad Request 응답을 반환합니다。
             return Response({"error": "Prompt and title are required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        create_video_for_scene.delay(character_id=character_id, prompt=prompt, title=title)
+        create_video_for_scene.delay(character_id=character_id, prompt=prompt, title=title, user_id=user_id)
 
         return Response({"message": "Video generation started."}, status=status.HTTP_202_ACCEPTED)
 
@@ -165,7 +165,7 @@ class VideoListView(APIView):
             title = f"{character_instance.characterName} - Scene {scene_id}"
             if prompt:
                 scene_tasks.append(
-                    create_video_for_scene.s(character_id=character_id, prompt=prompt, title=title, channel_id=channel_id)
+                    create_video_for_scene.s(character_id=character_id, prompt=prompt, title=title, channel_id=channel_id, user_id=user_id)
                 )
 
         if not scene_tasks:
