@@ -177,7 +177,7 @@ class CharacterGenerateAsyncView(APIView):
                 "task_id": task.id,
                 "book_id": book_id,
                 "book_title": book.title,
-                "message": "캐릭터 생성이 시작되었습니다. 실시간 처리 상태는 EventStream을 통해 확인 가능합니다: GET /books/{book_id}/eventstream/characters"
+                "message": "캐릭터 생성이 시작되었습니다. SSE 연결을 통해 진행 상황을 확인할 수 있습니다.",
             }, status=202)  # 202 Accepted
 
         except Exception as e:
