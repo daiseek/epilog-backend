@@ -118,6 +118,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'django_grip.GripMiddleware',
     'django_prometheus.middleware.PrometheusBeforeMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
@@ -289,6 +290,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # 이 부분을 꼭 추가해야 함
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# GRIP 설정 (django-eventstream 필요)
+GRIP_URL = 'http://localhost:5561'
 
 # Celery 설정
 CELERY_BROKER_URL = env('CELERY_BROKER_URL', default='amqp://admin:1234@backend-rabbitmq:5672//')

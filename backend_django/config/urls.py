@@ -38,7 +38,8 @@ urlpatterns = [
     # path('events/', get_event_stream_response, name='eventstream'),
 
     
-    re_path(r'^events/', asgi_app), # /events/로 시작하는 모든 요청을 asgi_app으로 보냄
+
+    # re_path(r'^events/', asgi_app), # /events/로 시작하는 모든 요청을 asgi_app으로 보냄
 
     path("", index),
     
