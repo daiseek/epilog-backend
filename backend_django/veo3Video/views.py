@@ -1,3 +1,4 @@
+import uuid
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -8,6 +9,7 @@ from .models import Video
 from .serializers import VideoSerializer
 from .veo_service import list_videos
 from .tasks import create_video_for_scene, combine_videos_task
+from celery import chord
 # veo3Vdideo/views.py : 컨트롤러.
 # HTTP 상태 코드 반환에만 집중, 별도의 서비스 로직은 veo_servied.py에 분리. 또한 비동기 처리는 tasks.py에 일임
 
@@ -99,8 +101,21 @@ class VideoListView(APIView):
 
         try:
             # user_id와 is_combined=True 필터를 사용하여 병합된 비디오 목록을 조회합니다.
-            videos = list_videos(user_id=user_id, is_combined=True)
-            return Response(videos, status=status.HTTP_200_OK)
+            videos = Video.objects.filter(user_id=user_id, is_combined=True)
+            response_data = []
+
+            for v in videos:
+                response_data.append({
+                    "video_id": v.id,
+                    "video_title": v.title,
+                    "character_id": v.character.id,
+                    "character_name": v.character.characterName,
+                    "character_description": v.character.characterDescription,
+                    "video_url": v.video_uri,
+                    "thumbnail_url": v.thumbnail_url,
+                    "is_bookmarked": v.is_bookmarked,
+                })
+            return Response(response_data, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -114,6 +129,7 @@ class VideoListView(APIView):
 
         script_cache = caches['script_cache']
         cached_data = script_cache.get(f"script:{script_id}")
+        user_id = request.user.id if request.user.is_authenticated else None
 
         if not cached_data:
             return Response({"error": "Script not found in cache or expired"}, status=status.HTTP_404_NOT_FOUND)
@@ -145,7 +161,7 @@ class VideoListView(APIView):
 
         final_output_title = f"{character_instance.characterName}_FullStory"
 
-        from celery import chord
+
         
         callback = combine_videos_task.s(
             output_title=final_output_title,
@@ -218,7 +234,17 @@ class CombineVideosView(APIView):
         return Response({"message": "Video combination started."}, status=status.HTTP_202_ACCEPTED)
 
 
-# import uuid
+from django.http import StreamingHttpResponse
+from django_eventstream import send_event, get_events
+import time
+
+def events(request, channel_id):
+    # django-eventstream의 get_events는 request 객체를 인자로 받아
+    # URL 패턴에서 channel_id를 자동으로 추출하여 사용합니다.
+    return StreamingHttpResponse(get_events(request), content_type='text/event-stream')
+
+
+
 # from django_eventstream import send_event
 
 # class FullStoryGenerationView(APIView):

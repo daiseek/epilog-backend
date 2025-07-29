@@ -28,11 +28,11 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path("metrics", exports.ExportToDjangoView),
     path('books/', include('books.urls')),  # Books 애플리케이션의 URL 포함
-    path('veo3Video/', include('veo3Video.urls')),
+    path('videos/', include('veo3Video.urls')),
     path('characters/', include('characters.urls')),
     path('users/', include('users.urls')),
     
-    re_path(r'^events/', asgi_app), # /events/로 시작하는 모든 요청을 asgi_app으로 보냄
+    # re_path(r'^events/', asgi_app), # /events/로 시작하는 모든 요청을 asgi_app으로 보냄
     path("", index),
     
     path('', include('django_prometheus.urls')),
