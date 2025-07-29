@@ -126,6 +126,9 @@ class VideoListView(APIView):
                     "video_url": v.video_uri,
                     "thumbnail_url": v.thumbnail_url,
                     "is_bookmarked": v.is_bookmarked,
+                    "created_at": v.created_at.isoformat(), # ISO 8601 형식으로 변환
+                    "book_id": v.character.book.id if v.character and v.character.book else None,
+                    "book_name": v.character.book.title if v.character and v.character.book else None,
                 })
             return Response(response_data, status=status.HTTP_200_OK)
         except Exception as e:
