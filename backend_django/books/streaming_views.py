@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 
 def task_status_eventstream(request: HttpRequest, task_id: str):
-    return stream(request, channel=f"task-{task_id}")
+    return stream(request, channel=f"task_{task_id.replace('-', '_')}")
 
 # class BookPdfUploadStreamView(APIView):
 #     """
