@@ -1,8 +1,5 @@
 """Books 앱 views.py"""
 
-import logging
-import asyncio
-import threading
 from datetime import datetime
 from django.utils import timezone
 from django.core.cache import caches
@@ -221,7 +218,7 @@ class BookFromPdfAsyncView(APIView):
                 "title": book.title,
                 "processing_status": book.processing_status,
                 "task_id": task.id,
-                "message": "PDF 처리가 시작되었습니다. 실시간 처리 상태는 EventStream을 통해 확인 가능합니다: GET /books/{book_id}/eventstream/processing"
+                "message": "PDF 처리가 시작되었습니다. SSE 연결을 통해 진행 상황을 확인할 수 있습니다."
             }, status=202)  # 202 Accepted
 
         except Exception as e:

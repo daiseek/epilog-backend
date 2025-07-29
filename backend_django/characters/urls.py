@@ -3,6 +3,7 @@ from .views import (
     # CharacterConditionalCreateOrListView,  # books 앱으로 이동
     ScriptGenerateView,
     ScriptGenerateAsyncView,
+    character_task_eventstream_view,  # SSE 스트리밍 뷰 추가
     # ScriptTaskStatusView,        # 더 이상 사용 안함 (polling 방식)
     # CharacterGenerateAsyncView,  # books 앱으로 이동
     # CharacterTaskStatusView      # books 앱으로 이동
@@ -26,7 +27,8 @@ urlpatterns = [
     # === 🚀 새로운 스트리밍 통합 API (POST + SSE) ===
     # path('<int:character_id>/scripts/generate-stream', ScriptGenerateStreamView.as_view()),  # 대본 생성 + 실시간 스트리밍
 
-    # === 실시간 알림 (EventStream) ===
+    # === 실시간 알림 (SSE EventStream) ===
+    path('tasks/<str:task_id>/eventstream', character_task_eventstream_view),  # 캐릭터/대본 작업 상태 (task_id 기반)
     # path('scripts/<str:script_id>/eventstream', script_generation_eventstream), # 대본 생성 상태 (script_id 기반) - 주석처리됨
 
 ]
