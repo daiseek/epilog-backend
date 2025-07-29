@@ -31,8 +31,6 @@ urlpatterns = [
     path('veo3Video/', include('veo3Video.urls')),
     path('characters/', include('characters.urls')),
     path('users/', include('users.urls')),
-    path('events/', include(django_eventstream.urls), {'channels': ['.*']}),  # SSE 실시간 이벤트 (동적 채널 허용)
-    path('events/<channel>/', include(django_eventstream.urls)),
     # path('events/', get_event_stream_response, name='eventstream'),
     path("", index),
     

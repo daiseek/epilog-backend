@@ -221,26 +221,10 @@ CACHES = {
     }
 }
 
-# EventStream 설정
-# 참고: DjangoModelStorage는 DB를, RedisStorage는 Redis를 이벤트 저장소로 사용합니다.
-# RedisStorage가 더 빠르고 확장성이 좋습니다.
-EVENTSTREAM_STORAGE_CLASS = "django_eventstream.storage.RedisStorage"
-print(f"🔍 [SETTINGS] EventStream Redis 스토리지 사용")
+# Django EventStream 제거 - 직접 SSE 구현 사용
+# 이제 Redis pub/sub을 직접 사용하여 SSE 구현
+print(f"🔍 [SETTINGS] Django EventStream 제거됨 - 직접 SSE 구현 사용")
 
-# Celery와 같은 외부 프로세스에서 이벤트를 보내기 위해 GRIP 프록시 모드를 비활성화합니다.
-EVENTSTREAM_ENABLE_GRIP = False
-
-# RedisStorage를 위한 연결 설정 (DB 3번 사용)
-EVENTSTREAM_STORAGE_CONNECTION = {
-    'host': env("REDIS_HOST", default="backend-redis"),
-    'port': env.int("REDIS_PORT", default=6379),
-    'db': 3,
-}
-
-# DjangoModelStorage 사용 시 필요한 폴링 설정 (RedisStorage에서는 불필요)
-# EVENTSTREAM_POLL_TIMEOUT = 2.0  # 폴링 타임아웃 (초)
-# EVENTSTREAM_POLL_INTERVAL = 0.1  # 폴링 간격 (초)
-# EVENTSTREAM_MAX_EVENTS_PER_REQUEST = 100  # 한 번에 처리할 최대 이벤트 수
 
 CHANNEL_LAYERS = {
     "default": {
