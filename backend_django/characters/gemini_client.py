@@ -416,6 +416,10 @@ scene format:
 - camera: Camera movement or framing (e.g. tracking shot, zoom-in)
 - soundtrack: Explanation of background music and sound effects (English)
 - characters: List of 1-2 characters (name, appearance, expression, action in English respectively)
+- lines: Dialogue lines for characters (array of objects with speaker, line_en, line_ko)
+  - Each line must have: speaker (character name), line_en (English dialogue), line_ko (Korean translation)
+  - Include meaningful dialogue that advances the story or reveals character
+  - If no dialogue in the scene, use empty array []
 - rewriting_prompt: ⚠️⚠️ Very important ⚠️⚠️ Key and rich English sentence.
   - Place and time (e.g.: "in a moonlit forest at midnight")
   - Character's speaking/listening actions and detailed expressions (e.g.: "character speaks with a thoughtful expression, gesturing subtly", "listens intently, nodding slowly")
@@ -450,6 +454,13 @@ Example of scene format:
       "action": "Stands nearby, silently observing the Narrator with unwavering attention."
     }}
   ],
+  "lines": [
+    {{
+      "speaker": "The Narrator",
+      "line_en": "Beware the baobabs. Children must know.",
+      "line_ko": "바오밥나무를 조심해. 아이들이 알아야 해."
+    }}
+  ],
   "rewriting_prompt": "A close-up shot focuses on the hands of the Narrator, a pilot in his forties, as he sketches frantically in a notepad amidst airplane wreckage in the Sahara. The low afternoon sun casts long shadows. His expression is one of intense worry as he mutters, 'Beware the baobabs. Children must know.' The only sounds are pencil scratching and a faint, unsettling wind. Nearby, the Little Prince, a small boy with golden hair and a green coat, watches him in silence with a curious gaze. The style is a blend of realistic desert textures and a soft, hand-drawn aesthetic."
 }}
 
@@ -473,6 +484,13 @@ Example of scene format:
       "appearance": "A small boy with brilliant golden hair, wearing a distinct green coat and a small yellow scarf.",
       "expression": "Calm, innocent, and direct, with a clear sense of purpose.",
       "action": "Takes a cautious step closer and speaks for the first time, his voice clear and gentle, 'If you please... draw me a sheep.'"
+    }}
+  ],
+  "lines": [
+    {{
+      "speaker": "The Little Prince",
+      "line_en": "If you please... draw me a sheep.",
+      "line_ko": "부탁이 있어요... 양 한 마리를 그려주세요."
     }}
   ],
   "rewriting_prompt": "A moment later, the camera is a static medium shot. The Little Prince takes a step closer to the Narrator, his boots crunching softly on the sand. The Narrator pauses his sketching. Maintaining the blend of realistic and hand-drawn styles, the Little Prince looks at the Narrator and speaks in a clear, gentle voice, 'If you please... draw me a sheep.' The urgent mood shifts to one of quiet, surreal wonder."
@@ -499,6 +517,7 @@ Example of scene format:
       "action": "Stands perfectly still, calmly waiting for the Narrator's response."
     }}
   ],
+  "lines": [],
   "rewriting_prompt": "The camera cuts to a tight close-up of the Narrator's face. His hand freezes. His eyes widen in pure astonishment as he looks up and truly sees the Little Prince for the first time. A stunned silence falls as even the wind seems to hold its breath. The Narrator is speechless, his expression shifting from frantic worry to utter disbelief, while the Little Prince stands patiently, waiting for his sheep."
 }}
 
@@ -516,6 +535,7 @@ Each scene must be a JSON object with the following keys:
 - camera: string
 - soundtrack: string
 - Characters: Character object list (name, application, expression, action)
+- lines: Array of dialogue objects with speaker, line_en, line_ko
 - rewriting_prompt: English sentence 
 
 Return the scene arrangement in JSON form. Without further comment or markdown.

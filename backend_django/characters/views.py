@@ -473,7 +473,7 @@ class ScriptGenerateView(APIView):
                     "camera": scene.get("camera"),
                     "soundtrack": scene.get("soundtrack"),
                     "characters": scene.get("characters"),
-                    # "lines": scene.get("lines"),
+                    "lines": scene.get("lines"),
                     "rewriting_prompt": scene.get("rewriting_prompt"),
                     "rewriting_id": scene.get("rewriting_id")  # 이미 파싱 함수에서 생성됨
                 })

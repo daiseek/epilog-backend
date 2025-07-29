@@ -208,6 +208,7 @@ def generate_script_task(self, character_id, scene_count=3, script_id=None):
                 "camera": scene.get("camera"),
                 "soundtrack": scene.get("soundtrack"),
                 "characters": scene.get("characters"),
+                "lines": scene.get("lines"),
                 "rewriting_prompt": scene.get("rewriting_prompt"),
                 "rewriting_id": scene.get("rewriting_id")
             })
