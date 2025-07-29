@@ -4,9 +4,10 @@ from .views import (
     VideoBookmarkToggleView, 
     BookmarkedVideoListView, 
     ScriptCacheView, 
-    VideoDeleteView, 
-    events
+    VideoDeleteView,
+    EventTestView
 )
+
 
 urlpatterns = [
     # SSE events stream
@@ -20,8 +21,11 @@ urlpatterns = [
     path('bookmarks/bookmarked', BookmarkedVideoListView.as_view(), name='list_bookmarked_videos'),
 
     # Video deletion
-    path('videos/<int:videoId>/', VideoDeleteView.as_view(), name='delete_video'),
+    path('<int:videoId>/', VideoDeleteView.as_view(), name='delete_video'),
 
     # Script caching
     path('cache-script/', ScriptCacheView.as_view(), name='cache_script'),
+
+
+    path('test-event/', EventTestView.as_view(), name='event-test')
 ]

@@ -10,6 +10,10 @@ from .serializers import VideoSerializer
 from .veo_service import list_videos
 from .tasks import create_video_for_scene, combine_videos_task
 from celery import chord
+from django.http import StreamingHttpResponse
+from django_eventstream import send_event, get_events
+import time
+from rest_framework.permissions import AllowAny
 # veo3Vdideo/views.py : 컨트롤러.
 # HTTP 상태 코드 반환에만 집중, 별도의 서비스 로직은 veo_servied.py에 분리. 또한 비동기 처리는 tasks.py에 일임
 
@@ -234,16 +238,29 @@ class CombineVideosView(APIView):
         return Response({"message": "Video combination started."}, status=status.HTTP_202_ACCEPTED)
 
 
-from django.http import StreamingHttpResponse
-from django_eventstream import send_event, get_events
-import time
+
 
 def events(request, channel_id):
     # django-eventstream의 get_events는 request 객체를 인자로 받아
     # URL 패턴에서 channel_id를 자동으로 추출하여 사용합니다.
     return StreamingHttpResponse(get_events(request), content_type='text/event-stream')
 
+# veo3Video/views.py
+class EventTestView(APIView):
+    """
+    테스트용 뷰: POST 시 채널에 ping→end 이벤트를 보냅니다.
+    """
+    permission_classes = [AllowAny]
+    def post(self, request, *args, **kwargs):
+        channel = request.data.get('channel')
+        if not channel:
+            return Response({'error': 'channel is required'}, status=400)
 
+        # 테스트 이벤트 전송
+        send_event(channel, 'message', {'status': 'ping'})
+        send_event(channel, 'end',     {'status': 'bye'})
+
+        return Response({'ok': True})
 
 # from django_eventstream import send_event
 
