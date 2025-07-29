@@ -2,7 +2,7 @@ import os
 from django.core.asgi import get_asgi_application
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
-from django.urls import path, re_path
+from django.urls import path, re_path, include # include 임포트 추가
 import django_eventstream # django_eventstream 모듈 전체를 임포트
 
 # 환경변수에 따라 설정 파일 선택
@@ -18,14 +18,10 @@ django_asgi_app = get_asgi_application()
 
 # 이제 ProtocolTypeRouter를 사용하여 프로토콜에 따라 요청을 분기합니다.
 application = ProtocolTypeRouter({
-    # 일반적인 HTTP 요청은 Django의 기본 ASGI 앱이 처리합니다.
-    "http": AuthMiddlewareStack( # AuthMiddlewareStack을 http 프로토콜 전체에 한 번만 적용
+    "http": AuthMiddlewareStack( # AuthMiddlewareStack이 최상위 HTTP 라우터를 감쌈
         URLRouter([
-            # '/events/' 경로로 오는 SSE 요청은 django-eventstream이 처리합니다.
-            # django_eventstream.urls.urlpatterns를 사용하여 URL 패턴을 포함합니다.
-            path('events/', URLRouter(django_eventstream.urls.urlpatterns)),
-            # 나머지 모든 HTTP 요청은 Django의 기본 ASGI 앱이 처리하도록 합니다.
-            re_path(r'', django_asgi_app),
+            path('events/', include(django_eventstream.urls)), # django_eventstream.urls를 직접 include
+            re_path(r'^', django_asgi_app), # Django의 기본 ASGI 앱으로 폴백
         ])
     ),
     # (나중에 웹소켓 등을 추가한다면 여기에 'websocket': AuthMiddlewareStack(URLRouter([...])) 을 추가할 수 있습니다.)

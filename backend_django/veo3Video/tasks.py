@@ -175,7 +175,26 @@ def combine_videos_task(self, results, output_title, user_id=None, character_id=
             # 기타 필요한 필드 추가
         )
         print(f"Combined video metadata saved to DB: {output_title}")
-        send_event(channel_id, 'message', {'status': 'process_completed', 'message': 'Successfully generated the full story video.', 'signed_url': signed_url})
+        video_instance = Video.objects.create(
+            video_uri=final_gcs_uri,
+            prompt=f"Combined video: {', '.join(video_uris)}",
+            title=output_title,
+            user_id=user_id,
+            character_id=character_id,
+            is_combined=True, # 병합된 영상임을 표시
+            # 기타 필요한 필드 추가
+        )
+        print(f"Combined video metadata saved to DB: {output_title}")
+
+        character_instance = Character.objects.get(id=character_id)
+
+        send_event(channel_id, 'message', {
+            'status': 'process_completed',
+            'message': '영상생성이 완료되었습니다!',
+            'video_url': signed_url,
+            'video_title': video_instance.title,
+            'character_name': character_instance.characterName
+        })
         send_event(channel_id, 'close', {'status': 'success'})
 
         return {"status": "success", "gcs_uri": final_gcs_uri, "signed_url": signed_url}
