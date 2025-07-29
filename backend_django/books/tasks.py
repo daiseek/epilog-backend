@@ -3,13 +3,41 @@ import tempfile
 import os
 import base64
 import traceback
+import redis
+import json
 from django.core.files.base import ContentFile
 from .models import Book
 from .pdf_utils import extract_text_from_pdf
 from .gemini_client import summarize_with_gemini
 from .s3_client import upload_to_s3
-from .eventstream_views import push_book_completed_event, push_book_error_event
 
+
+'''SSE 알림을 직접 구현한 함수 - process_book_pdf_task()에서 호출하여 사용, Celery 태스크에서 직접 Redis를 통해 이벤트 전송'''
+def send_task_event(task_id: str, event_type: str, data: dict):
+    """
+    Redis pub/sub을 통한 직접 이벤트 전송
+    """
+    try:
+        # Redis 클라이언트 설정
+        redis_client = redis.Redis(host='backend-redis', port=6379, db=3)
+        # 채널 이름 설정, task - {task_id} 형태
+        channel = f"task-{task_id}"
+        # 이벤트 메시지 설정 
+        message = {
+            "event": event_type,
+            "data": data
+        }
+        # 이벤트 메시지 전송
+        redis_client.publish(channel, json.dumps(message))
+        print(f"[DEBUG] Redis 이벤트 전송 성공 - 채널: {channel}, 타입: {event_type}")
+        return True
+        
+    except Exception as e:
+        print(f"[DEBUG] Redis 이벤트 전송 실패 - 채널: {channel}, 오류: {str(e)}")
+        return False
+
+
+''' Celery 태스크: 책 PDF 파일을 비동기적으로 처리하는 함수 '''
 @shared_task(bind=True)
 def process_book_pdf_task(self, book_id, pdf_file_content, pdf_file_name):
     """
@@ -34,6 +62,24 @@ def process_book_pdf_task(self, book_id, pdf_file_content, pdf_file_name):
         
         print(f"책 PDF 처리 시작 - ID: {book_id}, Task: {task_id}, 제목: {book.title}")
         print(f"[DEBUG] 채널명 예상: task-{task_id}")
+        
+        # 클라이언트 연결 시간 확보를 위한 지연 (5초)
+        print(f"[DEBUG] 클라이언트 연결 대기 중... (3초)")
+        import time
+        time.sleep(3)
+        
+        # 작업 시작 이벤트 전송 
+        try:
+            print(f"[DEBUG] started 이벤트 전송 시작 - 채널: task-{task_id}")
+            # SSE 통신을 통해 이벤트 메시지 전송
+            send_task_event(task_id, "started", {
+                "message": "PDF 처리 시작됨", 
+                "book_id": book_id,
+                "book_title": book.title
+            })
+            print(f"[DEBUG] started 이벤트 전송 성공 - 채널: task-{task_id}")
+        except Exception as e:
+            print(f"[DEBUG] started 이벤트 전송 실패 - 채널: task-{task_id}, 오류: {str(e)}")
         
         # base64 디코딩하여 임시 파일 생성
         pdf_binary = base64.b64decode(pdf_file_content)
@@ -69,9 +115,13 @@ def process_book_pdf_task(self, book_id, pdf_file_content, pdf_file_name):
         book.save()
 
         # 5. 완료 이벤트 전송 (S3 URL만 전송)
-        print(f"[DEBUG] push_book_completed_event 호출 직전 - task_id: {task_id}, pdf_url: {pdf_url}")
-        push_book_completed_event(task_id, pdf_url)
-        print(f"[DEBUG] push_book_completed_event 호출 완료 - task_id: {task_id}")
+        try:
+            # 작업 성공시 클라이언트에게 메시지 전송
+            print(f"[DEBUG] completed 이벤트 전송 시작 - 채널: task-{task_id}")
+            send_task_event(task_id, "completed", {"s3_url": pdf_url})
+            print(f"[DEBUG] completed 이벤트 전송 성공 - 채널: task-{task_id}")
+        except Exception as e:
+            print(f"[DEBUG] completed 이벤트 전송 실패 - 채널: task-{task_id}, 오류: {str(e)}")
         
         print(f"✅ 책 PDF 처리 완료 - ID: {book_id}, Task: {task_id}")
         
@@ -86,7 +136,13 @@ def process_book_pdf_task(self, book_id, pdf_file_content, pdf_file_name):
     except Book.DoesNotExist:
         error_msg = f"책을 찾을 수 없습니다 - ID: {book_id}"
         print(f"❌ {error_msg}")
-        push_book_error_event(task_id, error_msg)
+        try:
+            # 오류 상태에 대한 로그 
+            print(f"[DEBUG] error 이벤트 전송 시작 - 채널: task-{task_id}")
+            send_task_event(task_id, "error", {"message": error_msg})
+            print(f"[DEBUG] error 이벤트 전송 성공 - 채널: task-{task_id}")
+        except Exception as e:
+            print(f"[DEBUG] error 이벤트 전송 실패 - 채널: task-{task_id}, 오류: {str(e)}")
         return {"status": "error", "message": error_msg}
     
     except Exception as e:
@@ -104,7 +160,12 @@ def process_book_pdf_task(self, book_id, pdf_file_content, pdf_file_name):
             pass
             
         # 오류 이벤트 전송
-        push_book_error_event(task_id, error_msg)
+        try:
+            print(f"[DEBUG] error 이벤트 전송 시작 - 채널: task-{task_id}")
+            send_task_event(task_id, "error", {"message": error_msg})
+            print(f"[DEBUG] error 이벤트 전송 성공 - 채널: task-{task_id}")
+        except Exception as e:
+            print(f"[DEBUG] error 이벤트 전송 실패 - 채널: task-{task_id}, 오류: {str(e)}")
         
         print(f"❌ 상세 스택 트레이스:\n{traceback.format_exc()}")
         
