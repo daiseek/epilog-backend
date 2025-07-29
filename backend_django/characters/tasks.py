@@ -16,17 +16,44 @@ from .pdf_chunker import (
     prioritize_character_chunks
 )
 from books.models import Book
-# from books.eventstream_views import notify_character_progress, notify_character_completed, notify_script_progress, notify_script_completed
 import datetime
+import redis
+import json
 
 # Celery 전용 로거 설정
 logger = get_task_logger(__name__)
 
 
+'''SSE 알림을 직접 구현한 함수 - 캐릭터/대본 태스크에서 호출하여 사용, Celery 태스크에서 직접 Redis를 통해 이벤트 전송'''
+def send_character_task_event(task_id: str, event_type: str, data: dict):
+    """
+    Redis pub/sub을 통한 직접 이벤트 전송 (characters 도메인용)
+    """
+    try:
+        # Redis 클라이언트 설정
+        redis_client = redis.Redis(host='backend-redis', port=6379, db=3)
+        # 채널 이름 설정, task - {task_id} 형태
+        channel = f"task-{task_id}"
+        # 이벤트 메시지 설정 
+        message = {
+            "event": event_type,
+            "data": data
+        }
+        # 이벤트 메시지 전송
+        redis_client.publish(channel, json.dumps(message))
+        print(f"[DEBUG] Characters Redis 이벤트 전송 성공 - 채널: {channel}, 타입: {event_type}")
+        return True
+        
+    except Exception as e:
+        print(f"[DEBUG] Characters Redis 이벤트 전송 실패 - 채널: {channel}, 오류: {str(e)}")
+        return False
+
+
+'''대본을 비동기적으로 처리하는 함수'''
 @shared_task(bind=True)
 def generate_script_task(self, character_id, scene_count=3, script_id=None):
     """
-    대본을 비동기적으로 생성하는 Celery 태스크 (Redis 기반)
+    대본을 비동기적으로 생성하는 Celery 태스크 (Redis 기반 + SSE 알림)
     
     Args:
         character_id: Character ID
@@ -44,6 +71,8 @@ def generate_script_task(self, character_id, scene_count=3, script_id=None):
     # Redis에 태스크 상태 저장
     task_key = f"task:{task_id}"
     script_key = f"script:{script_id}"
+    
+    print(f"[DEBUG] 대본 Celery 작업 시작됨 - character_id: {character_id}, task_id: {task_id}, script_id: {script_id}")
     
     try:
         # 1. 초기 상태 저장 (script_id 포함)
@@ -71,11 +100,12 @@ def generate_script_task(self, character_id, scene_count=3, script_id=None):
         }
         script_cache.set(script_key, script_init_data, timeout=2000)
         
-        # 📡 실시간 알림: 대본 생성 시작 (중복 키 제거)
-        # init_data_for_notify = {k: v for k, v in init_data.items() if k not in ['status', 'script_id']}
-        # notify_script_progress(script_id, "PROCESSING", **init_data_for_notify)
-        
         logger.info(f"📝 [TASK START] 대본 생성 시작 - Character ID: {character_id}, Task ID: {task_id}")
+        
+        # 클라이언트 연결 시간 확보를 위한 지연 (3초)
+        print(f"[DEBUG] 클라이언트 연결 대기 중... (3초)")
+        import time
+        time.sleep(3)
         
         # Character 조회
         character = Character.objects.get(id=character_id, is_deleted=False)
@@ -87,23 +117,46 @@ def generate_script_task(self, character_id, scene_count=3, script_id=None):
         ).exclude(id=character.id)
         logger.info(f"👥 [SUB CHARACTERS] 조연 캐릭터 {sub_characters.count()}명 수집")
         
+        # 작업 시작 이벤트 전송 
+        try:
+            print(f"[DEBUG] started 이벤트 전송 시작 - 채널: task-{task_id}")
+            # SSE 통신을 통해 이벤트 메시지 전송
+            send_character_task_event(task_id, "started", {
+                "message": "대본 생성 시작됨", 
+                "character_id": character_id,
+                "character_name": character.characterName,
+                "script_id": script_id,
+                "scene_count": scene_count
+            })
+            print(f"[DEBUG] started 이벤트 전송 성공 - 채널: task-{task_id}")
+        except Exception as e:
+            print(f"[DEBUG] started 이벤트 전송 실패 - 채널: task-{task_id}, 오류: {str(e)}")
+        
         # 2. Gemini API로 대본 생성
         logger.info("🤖 [STEP 1/2] Gemini API 대본 생성 시작...")
         
-        # 진행 상태 업데이트
+        # 진행 상태 업데이트 및 SSE 이벤트 전송
         gemini_data = {
             "status": "PROCESSING",
             "character_id": character_id,
             "character_name": character.characterName,
             "scene_count": scene_count,
+            "script_id": script_id,
             "started_at": datetime.datetime.now().isoformat(),
             "message": "Gemini API로 대본 생성 중..."
         }
         script_cache.set(task_key, gemini_data, timeout=3600)
         
-        # 📡 실시간 알림: AI 대본 생성 중 (중복 키 제거)
-        # gemini_data_for_notify = {k: v for k, v in gemini_data.items() if k not in ['status']}
-        # notify_script_progress(script_id, "PROCESSING", **gemini_data_for_notify)
+        # SSE 이벤트 전송: AI 대본 생성 중
+        try:
+            send_character_task_event(task_id, "progress", {
+                "message": "Gemini API로 대본 생성 중...",
+                "step": "gemini_generation",
+                "character_name": character.characterName,
+                "script_id": script_id
+            })
+        except Exception as e:
+            print(f"[DEBUG] progress 이벤트 전송 실패: {str(e)}")
         
         raw_text = generate_scenes_with_gemini(
             main_character=character,
@@ -121,9 +174,21 @@ def generate_script_task(self, character_id, scene_count=3, script_id=None):
             "character_id": character_id,
             "character_name": character.characterName,
             "scene_count": scene_count,
+            "script_id": script_id,
             "started_at": datetime.datetime.now().isoformat(),
             "message": "대본 파싱 및 저장 중..."
         }, timeout=3600)
+        
+        # SSE 이벤트 전송: 파싱 중
+        try:
+            send_character_task_event(task_id, "progress", {
+                "message": "대본 파싱 및 저장 중...",
+                "step": "parsing",
+                "character_name": character.characterName,
+                "script_id": script_id
+            })
+        except Exception as e:
+            print(f"[DEBUG] progress 이벤트 전송 실패: {str(e)}")
         
         parsed_result = parse_scene_list(raw_text)
         
@@ -176,24 +241,20 @@ def generate_script_task(self, character_id, scene_count=3, script_id=None):
         }
         script_cache.set(task_key, completed_data, timeout=3600)
         
-        # 📡 실시간 알림: 대본 생성 완료 (Redis 데이터 포함)
-        # Redis에서 완전한 대본 데이터 가져오기
-        full_script_data = script_cache.get(script_cache_key)
-        
-        # notify_script_completed(script_id, {
-        #     "script_id": script_id,
-        #     "character_id": character_id,
-        #     "character_name": character.characterName,
-        #     "scene_count": len(generated_scenes),
-        #     "scenes": full_script_data.get("scenes", []) if full_script_data else generated_scenes,
-        #     # Redis에서 가져온 완전한 대본 데이터
-        #     "redis_data": full_script_data,
-        #     "processing_stats": {
-        #         "total_scenes": len(generated_scenes),
-        #         "generation_time": (datetime.datetime.now() - datetime.datetime.fromisoformat(completed_data["started_at"])).total_seconds()
-        #     }
-        # })
-        
+        # 5. 완료 이벤트 전송
+        try:
+            print(f"[DEBUG] completed 이벤트 전송 시작 - 채널: task-{task_id}")
+            send_character_task_event(task_id, "completed", {
+                "message": "대본 생성이 완료되었습니다.",
+                "script_id": script_id,
+                "character_name": character.characterName,
+                "scene_count": len(generated_scenes),
+                "scenes": generated_scenes  # 완료 시 장면 데이터도 전송
+            })
+            print(f"[DEBUG] completed 이벤트 전송 성공 - 채널: task-{task_id}")
+        except Exception as e:
+            print(f"[DEBUG] completed 이벤트 전송 실패 - 채널: task-{task_id}, 오류: {str(e)}")
+
         logger.info(f"✅ [TASK COMPLETE] 대본 생성 완료 - Task ID: {task_id}, Script ID: {script_id}")
         
         return {
@@ -213,16 +274,19 @@ def generate_script_task(self, character_id, scene_count=3, script_id=None):
             "status": "FAILED",
             "character_id": character_id,
             "scene_count": scene_count,
+            "script_id": script_id,
             "started_at": datetime.datetime.now().isoformat(),
             "failed_at": datetime.datetime.now().isoformat(),
             "error_message": error_msg
         }
         script_cache.set(task_key, error_data, timeout=3600)
         
-        # 📡 실시간 알림: 대본 생성 실패 (중복 키 제거)
-        # error_data_for_notify = {k: v for k, v in error_data.items() if k not in ['status']}
-        # notify_script_progress(script_id, "FAILED", **error_data_for_notify)
-        
+        # 오류 이벤트 전송
+        try:
+            send_character_task_event(task_id, "error", {"message": error_msg})
+        except Exception as e:
+            print(f"[DEBUG] error 이벤트 전송 실패: {str(e)}")
+
         return {"status": "error", "message": error_msg}
     
     except Exception as e:
@@ -235,15 +299,18 @@ def generate_script_task(self, character_id, scene_count=3, script_id=None):
             "status": "FAILED",
             "character_id": character_id,
             "scene_count": scene_count,
+            "script_id": script_id,
             "started_at": datetime.datetime.now().isoformat(),
             "failed_at": datetime.datetime.now().isoformat(),
             "error_message": error_msg
         }
         script_cache.set(task_key, error_data, timeout=3600)
         
-        # 📡 실시간 알림: 대본 생성 실패 (중복 키 제거)
-        # error_data_for_notify = {k: v for k, v in error_data.items() if k not in ['status']}
-        # notify_script_progress(script_id, "FAILED", **error_data_for_notify)
+        # 오류 이벤트 전송
+        try:
+            send_character_task_event(task_id, "error", {"message": error_msg})
+        except Exception as e:
+            print(f"[DEBUG] error 이벤트 전송 실패: {str(e)}")
         
         import traceback
         logger.error(f"❌ [ERROR] 상세 스택 트레이스:\n{traceback.format_exc()}")
@@ -256,11 +323,11 @@ def generate_script_task(self, character_id, scene_count=3, script_id=None):
         raise Exception(error_msg)
 
 
-
+'''PDF에서 캐릭터를 비동기적으로 처리하는 함수'''
 @shared_task(bind=True)
 def generate_characters_task(self, book_id):
     """
-    PDF에서 캐릭터를 비동기적으로 생성하는 Celery 태스크 (고급 처리)
+    PDF에서 캐릭터를 비동기적으로 생성하는 Celery 태스크 (고급 처리 + SSE 알림)
     
     Args:
         book_id: Book 인스턴스 ID
@@ -270,6 +337,8 @@ def generate_characters_task(self, book_id):
     
     # Redis에 태스크 상태 저장
     task_key = f"character_task:{task_id}"
+    
+    print(f"[DEBUG] 캐릭터 Celery 작업 시작됨 - book_id: {book_id}, task_id: {task_id}")
     
     try:
         # 1. 초기 상태 저장
@@ -282,14 +351,28 @@ def generate_characters_task(self, book_id):
         }
         script_cache.set(task_key, init_data, timeout=7200)  # 2시간
         
-        # 📡 실시간 알림: 초기화 시작
-        # notify_character_progress(book_id, task_id, "initialization", init_data)
-        
         logger.info(f"🎭 [TASK START] 캐릭터 생성 시작 - Book ID: {book_id}, Task ID: {task_id}")
+        
+        # 클라이언트 연결 시간 확보를 위한 지연 (3초)
+        print(f"[DEBUG] 클라이언트 연결 대기 중... (3초)")
+        import time
+        time.sleep(3)
         
         # Book 조회
         book = Book.objects.get(id=book_id)
         logger.info(f"📚 [BOOK] 책 정보 로드 - 제목: '{book.title}'")
+        
+        # 작업 시작 이벤트 전송 
+        try:
+            print(f"[DEBUG] started 이벤트 전송 시작 - 채널: task-{task_id}")
+            send_character_task_event(task_id, "started", {
+                "message": "캐릭터 생성 시작됨", 
+                "book_id": book_id,
+                "book_title": book.title
+            })
+            print(f"[DEBUG] started 이벤트 전송 성공 - 채널: task-{task_id}")
+        except Exception as e:
+            print(f"[DEBUG] started 이벤트 전송 실패 - 채널: task-{task_id}, 오류: {str(e)}")
         
         # 2. PDF 다운로드 및 청킹
         pdf_data = {
@@ -302,9 +385,16 @@ def generate_characters_task(self, book_id):
         }
         script_cache.set(task_key, pdf_data, timeout=7200)
         
-        # 📡 실시간 알림: PDF 처리 시작
-        # notify_character_progress(book_id, task_id, "pdf_processing", pdf_data)
-        
+        # SSE 이벤트 전송: PDF 처리 중
+        try:
+            send_character_task_event(task_id, "progress", {
+                "message": "PDF 다운로드 및 청킹 중...",
+                "step": "pdf_processing",
+                "book_title": book.title
+            })
+        except Exception as e:
+            print(f"[DEBUG] progress 이벤트 전송 실패: {str(e)}")
+
         logger.info("📄 [STEP 1/4] PDF 다운로드 시작...")
         pdf_content = fetch_pdf_from_s3(book_id)
         logger.info(f"📄 [STEP 1/4] PDF 다운로드 완료 - 크기: {len(pdf_content)} bytes")
@@ -337,6 +427,18 @@ def generate_characters_task(self, book_id):
             "message": f"캐릭터 추출 중... (0/{len(selected_chunks)})"
         }, timeout=7200)
         
+        # SSE 이벤트 전송: 캐릭터 추출 시작
+        try:
+            send_character_task_event(task_id, "progress", {
+                "message": f"캐릭터 추출 중... (0/{len(selected_chunks)})",
+                "step": "character_extraction",
+                "total_chunks": len(selected_chunks),
+                "processed_chunks": 0,
+                "book_title": book.title
+            })
+        except Exception as e:
+            print(f"[DEBUG] progress 이벤트 전송 실패: {str(e)}")
+        
         logger.info("🤖 [STEP 2/4] 청크별 캐릭터 추출 시작...")
         
         all_chunk_characters = []
@@ -355,6 +457,19 @@ def generate_characters_task(self, book_id):
                 "message": f"캐릭터 추출 중... ({i}/{len(selected_chunks)}) - 청크 {chunk['chunk_number']}"
             }, timeout=7200)
             
+            # SSE 이벤트 전송: 진행 상황 업데이트
+            try:
+                send_character_task_event(task_id, "progress", {
+                    "message": f"캐릭터 추출 중... ({i+1}/{len(selected_chunks)})",
+                    "step": "character_extraction",
+                    "total_chunks": len(selected_chunks),
+                    "processed_chunks": i+1,
+                    "current_chunk": chunk['chunk_number'],
+                    "book_title": book.title
+                })
+            except Exception as e:
+                print(f"[DEBUG] progress 이벤트 전송 실패: {str(e)}")
+            
             chunk_characters = extract_characters_from_chunk_with_retry(
                 chunk['text'], 
                 chunk
@@ -372,6 +487,16 @@ def generate_characters_task(self, book_id):
             "started_at": datetime.datetime.now().isoformat(),
             "message": "캐릭터 병합 및 중복 제거 중..."
         }, timeout=7200)
+        
+        # SSE 이벤트 전송: 병합 중
+        try:
+            send_character_task_event(task_id, "progress", {
+                "message": "캐릭터 병합 및 중복 제거 중...",
+                "step": "character_merging",
+                "book_title": book.title
+            })
+        except Exception as e:
+            print(f"[DEBUG] progress 이벤트 전송 실패: {str(e)}")
         
         logger.info("🔄 [STEP 3/4] 캐릭터 병합 및 중복 제거 시작...")
         final_characters = merge_and_deduplicate_characters(all_chunk_characters)
@@ -398,6 +523,18 @@ def generate_characters_task(self, book_id):
             "message": f"장면 생성 및 저장 중... (0/{len(final_characters)})"
         }, timeout=7200)
         
+        # SSE 이벤트 전송: 장면 생성 시작
+        try:
+            send_character_task_event(task_id, "progress", {
+                "message": f"장면 생성 및 저장 중... (0/{len(final_characters)})",
+                "step": "scene_generation",
+                "total_characters": len(final_characters),
+                "processed_characters": 0,
+                "book_title": book.title
+            })
+        except Exception as e:
+            print(f"[DEBUG] progress 이벤트 전송 실패: {str(e)}")
+        
         logger.info("📝 [STEP 4/4] 장면 생성 및 DB 저장 시작...")
         
         created_characters = []
@@ -416,9 +553,19 @@ def generate_characters_task(self, book_id):
             }
             script_cache.set(task_key, scene_progress, timeout=7200)
             
-            # 📡 실시간 알림: 장면 생성 진행
-            # notify_character_progress(book_id, task_id, "scene_generation", scene_progress)
-            
+            # SSE 이벤트 전송: 캐릭터별 진행 상황
+            try:
+                send_character_task_event(task_id, "progress", {
+                    "message": f"장면 생성 및 저장 중... ({i+1}/{len(final_characters)})",
+                    "step": "scene_generation",
+                    "total_characters": len(final_characters),
+                    "processed_characters": i+1,
+                    "current_character": char_data['characterName'],
+                    "book_title": book.title
+                })
+            except Exception as e:
+                print(f"[DEBUG] progress 이벤트 전송 실패: {str(e)}")
+    
             try:
                 # 캐릭터 생성
                 character = Character.objects.create(
@@ -433,7 +580,7 @@ def generate_characters_task(self, book_id):
                 # 장면 생성 (API 호출 간격 조절로 Rate Limit 방지)
                 import time
                 if i > 0:  # 첫 번째 캐릭터가 아닌 경우
-                    print(f"⏱️ API 호출 간격 조절 - 3초 대기... ({i+1}/{len(final_characters)})")
+                    print(f"⏱️ API 호출 간격 조절 - 1초 대기... ({i+1}/{len(final_characters)})")
                     time.sleep(1)
                 
                 scenes = create_character_scenes_with_retry(char_data, book.content)
@@ -460,9 +607,6 @@ def generate_characters_task(self, book_id):
                     'age': character.age,
                     'gender': character.gender,
                     'characterDescription': character.characterDescription
-                    # 'scenes': scene_data,  # EventStream에서는 scenes 제외 (응답 크기 최적화)
-                    # 'discoveryCount': char_data.get('discoveryCount', 1),  # 내부 처리 정보 제외
-                    # 'chunkSources': char_data.get('chunkSources', [])      # 내부 처리 정보 제외
                 })
                 
                 logger.info(f"✅ 캐릭터 '{character.characterName}' 생성 완료 - {len(scene_data)}개 장면")
@@ -491,8 +635,19 @@ def generate_characters_task(self, book_id):
         }
         script_cache.set(task_key, completed_data, timeout=7200)
         
-        # 📡 실시간 알림: 캐릭터 생성 완료
-        # notify_character_completed(book_id, task_id, created_characters)
+        # 7. 완료 이벤트 전송
+        try:
+            print(f"[DEBUG] completed 이벤트 전송 시작 - 채널: task-{task_id}")
+            send_character_task_event(task_id, "completed", {
+                "message": f"캐릭터 생성이 완료되었습니다. 총 {len(created_characters)}명의 캐릭터가 생성되었습니다.",
+                "book_title": book.title,
+                "total_characters": len(created_characters),
+                "characters": created_characters,
+                "processing_stats": completed_data["processing_stats"]
+            })
+            print(f"[DEBUG] completed 이벤트 전송 성공 - 채널: task-{task_id}")
+        except Exception as e:
+            print(f"[DEBUG] completed 이벤트 전송 실패 - 채널: task-{task_id}, 오류: {str(e)}")
         
         logger.info(f"✅ [TASK COMPLETE] 캐릭터 생성 완료 - Task ID: {task_id}, 캐릭터 수: {len(created_characters)}")
         
@@ -517,6 +672,12 @@ def generate_characters_task(self, book_id):
             "error_message": error_msg
         }, timeout=7200)
         
+        # 오류 이벤트 전송
+        try:
+            send_character_task_event(task_id, "error", {"message": error_msg})
+        except Exception as e:
+            print(f"[DEBUG] error 이벤트 전송 실패: {str(e)}")
+        
         return {"status": "error", "message": error_msg}
     
     except Exception as e:
@@ -534,9 +695,12 @@ def generate_characters_task(self, book_id):
         }
         script_cache.set(task_key, error_data, timeout=7200)
         
-        # 📡 실시간 알림: 캐릭터 생성 실패
-        # notify_character_progress(book_id, task_id, "failed", error_data)
-        
+        # 오류 이벤트 전송
+        try:
+            send_character_task_event(task_id, "error", {"message": error_msg})
+        except Exception as e:
+            print(f"[DEBUG] error 이벤트 전송 실패: {str(e)}")
+                
         import traceback
         logger.error(f"❌ [ERROR] 상세 스택 트레이스:\n{traceback.format_exc()}")
         
