@@ -266,7 +266,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # GRIP 설정 (django-eventstream 필요)
-GRIP_URL = 'http://localhost:5561'
+GRIP_URL = 'http://backend-pushpin:5561'
 
 # Celery 설정
 CELERY_BROKER_URL = env('CELERY_BROKER_URL', default='amqp://admin:1234@backend-rabbitmq:5672//')

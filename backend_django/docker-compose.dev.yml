@@ -121,6 +121,16 @@ services:
       - backend-net
 
   # Celery Worker 서비스 설정
+  backend-pushpin:
+    image: fanout/pushpin
+    container_name: backend-pushpin
+    ports:
+      - "5561:5561" # GRIP 포트
+      - "7999:7999" # HTTP 프록시 포트 (선택 사항)
+    networks:
+      - backend-net
+
+  # Celery Worker 서비스 설정
   celery-worker:
     build: .
     container_name: backend-celery-worker
@@ -135,6 +145,8 @@ services:
         condition: service_started
       backend-database:
         condition: service_healthy
+      backend-pushpin: # Pushpin 서비스 추가
+        condition: service_started
     env_file:
       - ./.env.dev
     environment:
@@ -142,6 +154,33 @@ services:
       GOOGLE_APPLICATION_CREDENTIALS: /app/gcp-key.json
       CELERY_BROKER_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@backend-rabbitmq:5672//
       CELERY_RESULT_BACKEND: redis://backend-redis:6379/0
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+      DEBUG: ${DEBUG}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      RUNWAY_API_KEY: ${RUNWAY_API_KEY}
+      TYPECAST_API_KEY: ${TYPECAST_API_KEY}
+      GOOGLE_CLOUD_PROJECT_ID: ${GOOGLE_CLOUD_PROJECT_ID}
+      GOOGLE_CLOUD_LOCATION: ${GOOGLE_CLOUD_LOCATION}
+      GOOGLE_CLOUD_GCS_BUCKET: ${GOOGLE_CLOUD_GCS_BUCKET}
+      GOOGLE_GENAI_USE_VERTEXAI: ${GOOGLE_GENAI_USE_VERTEXAI}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      DB_NAME: ${DB_NAME}
+      DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
+      GRAFANA_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GRAFANA_ADMIN_USER: ${GRAFANA_ADMIN_USER}
+      GRAFANA_ROLE: ${GRAFANA_ROLE}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_STORAGE_BUCKET_NAME: ${AWS_STORAGE_BUCKET_NAME}
+      AWS_S3_REGION_NAME: ${AWS_S3_REGION_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
     networks:
       - backend-net
 

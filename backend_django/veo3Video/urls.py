@@ -12,7 +12,7 @@ from .views import (
 urlpatterns = [
     # SSE events stream
     path('events/', include('django_eventstream.urls')),
-
+    path('events/<str:channels>/', include('django_eventstream.urls')),
     # Video list and creation
     path('', VideoListView.as_view(), name='list_videos'),
 
@@ -25,7 +25,6 @@ urlpatterns = [
 
     # Script caching
     path('cache-script/', ScriptCacheView.as_view(), name='cache_script'),
-
 
     path('test-event/', EventTestView.as_view(), name='event-test')
 ]
