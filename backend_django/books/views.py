@@ -1,8 +1,5 @@
 """Books 앱 views.py"""
 
-import logging
-import asyncio
-import threading
 from datetime import datetime
 from django.utils import timezone
 from django.core.cache import caches
