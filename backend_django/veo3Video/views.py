@@ -1,3 +1,4 @@
+import os
 import uuid
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -11,7 +12,14 @@ from .veo_service import list_videos
 from .tasks import create_video_for_scene, combine_videos_task
 from celery import chord
 from django.http import StreamingHttpResponse
-from django_eventstream import send_event, get_events
+import redis
+import json
+from django.conf import settings
+
+# Redis 클라이언트 초기화
+REDIS_HOST = os.getenv("REDIS_HOST", "backend-redis")
+REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
+redis_client = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, db=0)
 import time
 from rest_framework.permissions import AllowAny
 # veo3Vdideo/views.py : 컨트롤러.
@@ -70,23 +78,23 @@ class VideoGenerationFromScriptView(APIView):
 
 
 # 텍스트-투-비디오 생성 API 뷰
-# POST 요청을 처리하여 텍스트 프롬프트로부터 비디오 생성을 시작합니다。
+# POST 요청을 처리하여 텍스트 프롬프트로부터 비디오 생성을 시작합니다.
 class TextToVideoView(APIView):
     def post(self, request, *args, **kwargs):
-        # 요청 본문에서 'prompt'와 'title' 필드를 추출합니다。
+        # 요청 본문에서 'prompt'와 'title' 필드를 추출합니다.
         prompt = request.data.get("prompt")
         title = request.data.get("title")
         character_id = request.data.get("character_id")
         # lines = request.data.get("lines", []) # lines 데이터 추가
 
         # [JWT 통합 예정] 여기에 JWT 방식으로 사용자 ID를 받아오는 기능 개발
-        # 현재는 user_id를 None으로 설정하여 익명 사용자로 처리합니다。
-        # 실제 구현 시에는 request.user.id 또는 JWT 토큰에서 사용자 ID를 추출하여 사용합니다。
+        # 현재는 user_id를 None으로 설정하여 익명 사용자로 처리합니다.
+        # 실제 구현 시에는 request.user.id 또는 JWT 토큰에서 사용자 ID를 추출하여 사용합니다.
         user_id = None
 
-        # 필수 필드(prompt, title)가 누락되었는지 확인합니다。
+        # 필수 필드(prompt, title)가 누락되었는지 확인합니다.
         if not prompt or not title:
-            # 필수 필드가 누락된 경우 400 Bad Request 응답을 반환합니다。
+            # 필수 필드가 누락된 경우 400 Bad Request 응답을 반환합니다.
             return Response({"error": "Prompt and title are required"}, status=status.HTTP_400_BAD_REQUEST)
 
         create_video_for_scene.delay(character_id=character_id, prompt=prompt, title=title)
@@ -177,7 +185,7 @@ class VideoListView(APIView):
         chord(scene_tasks)(callback)
 
         # 작업 시작 이벤트 전송
-        send_event(channel_id, 'message', {'status': 'process_started', 'message': f'Full story generation started for {character_instance.characterName}.'})
+        redis_client.publish(channel_id, json.dumps({'status': 'process_started', 'message': f'Full story generation started for {character_instance.characterName}.'}))
 
         return Response({"channel_id": channel_id}, status=status.HTTP_202_ACCEPTED)
 
@@ -238,125 +246,23 @@ class CombineVideosView(APIView):
         return Response({"message": "Video combination started."}, status=status.HTTP_202_ACCEPTED)
 
 
+class VideoEventStreamView(APIView):
+    permission_classes = [AllowAny] # 인증 없이 접근 가능하도록 설정
 
-
-def events(request, channel_id):
-    # django-eventstream의 get_events는 request 객체를 인자로 받아
-    # URL 패턴에서 channel_id를 자동으로 추출하여 사용합니다.
-    return StreamingHttpResponse(get_events(request), content_type='text/event-stream')
-
-# veo3Video/views.py
-class EventTestView(APIView):
-    """
-    테스트용 뷰: POST 시 채널에 ping→end 이벤트를 보냅니다.
-    """
-    permission_classes = [AllowAny]
-    def post(self, request, *args, **kwargs):
-        channel = request.data.get('channel')
-        if not channel:
-            return Response({'error': 'channel is required'}, status=400)
-
-        # 테스트 이벤트 전송
-        send_event(channel, 'message', {'status': 'ping'})
-        send_event(channel, 'end',     {'status': 'bye'})
-
-        return Response({'ok': True})
-
-# from django_eventstream import send_event
-
-# class FullStoryGenerationView(APIView):
-#     """
-#     전체 스토리 비디오 생성 프로세스를 시작하는 API 뷰.
-#     이 뷰는 사용자가 캐시한 스크립트(ScriptCacheView를 통해)를 기반으로
-#     여러 비디오 생성 및 병합 작업을 Celery를 통해 비동기적으로 조율합니다.
-#
-#     **처리 흐름:**
-#     1.  **스크립트 데이터 검증 및 로드:**
-#         *   요청에서 `script_id`를 받아 Redis 캐시에서 해당 스크립트 데이터를 조회합니다.
-#         *   캐시된 데이터의 유효성(characterId, scenes 존재 여부)을 검증합니다.
-#         *   캐릭터 정보를 데이터베이스에서 가져옵니다.
-#     2.  **개별 장면 비디오 생성 태스크 준비 (병렬 처리):**
-#         *   캐시된 스크립트의 각 `scene` (장면)을 반복합니다.
-#         *   각 `scene`에 대해 `create_video_for_scene` Celery 태스크를 생성하고, 이 태스크들을 `scene_tasks` 리스트에 추가합니다.
-#         *   `create_video_for_scene` 태스크는 다음을 담당합니다:
-#             *   해당 장면의 텍스트 프롬프트로부터 비디오 생성 (Veo API 사용).
-#             *   생성된 비디오와 나레이션 오디오를 FFmpeg를 사용하여 합성.
-#             *   합성된 비디오를 Google Cloud Storage (GCS)에 업로드.
-#             *   생성된 비디오의 메타데이터를 데이터베이스에 저장.
-#         *   이 `scene_tasks`들은 Celery `chord`의 '헤더' 부분으로, 병렬로 실행될 예정입니다.
-#     3.  **최종 비디오 병합 태스크 준비 (콜백 처리):**
-#         *   모든 개별 장면 비디오 생성 태스크(`scene_tasks`)가 성공적으로 완료된 후에 실행될 `combine_videos_task` Celery 태스크를 '콜백'으로 설정합니다.
-#         *   `combine_videos_task`는 다음을 담당합니다:
-#             *   `scene_tasks`에서 반환된 모든 개별 비디오의 GCS URI를 수집.
-#             *   수집된 비디오들을 FFmpeg를 사용하여 하나의 최종 비디오로 병합.
-#             *   병합된 최종 비디오를 GCS에 업로드.
-#             *   최종 비디오의 메타데이터를 데이터베이스에 저장.
-#     4.  **Celery `chord` 실행:**
-#         *   `celery.chord(scene_tasks)(callback)`를 호출하여 전체 비동기 워크플로우를 시작합니다.
-#         *   이것은 "모든 장면 비디오가 생성되면, 그 결과들을 가지고 최종 비디오를 합쳐라"는 의미의 강력한 패턴입니다.
-#
-#     **요청 (POST):**
-#     *   `script_id` (string, 필수): `ScriptCacheView`를 통해 캐시된 스크립트의 고유 ID.
-#
-#     **응답:**
-#     *   `202 Accepted`: 비디오 생성 프로세스가 성공적으로 시작되었음을 알립니다. 실제 비디오 생성은 백그라운드에서 비동기적으로 진행됩니다.
-#     *   `400 Bad Request`: `script_id`가 누락된 경우.
-#     *   `404 Not Found`: 캐시에서 `script_id`에 해당하는 스크립트를 찾을 수 없거나 만료된 경우.
-#     *   `500 Internal Server Error`: 캐시된 스크립트 데이터가 유효하지 않거나, 캐릭터를 찾을 수 없는 등 서버 내부 오류 발생 시.
-#     """
-#     def post(self, request, *args, **kwargs):
-#         script_id = request.data.get("script_id")
-#         if not script_id:
-#             return Response({"error": "script_id is required"}, status=status.HTTP_400_BAD_REQUEST)
-#
-#         # SSE 채널 ID 생성
-#         channel_id = f"video-generation-{uuid.uuid4()}"
-#
-#         script_cache = caches['script_cache']
-#         cached_data = script_cache.get(f"script:{script_id}")
-#
-#         if not cached_data:
-#             return Response({"error": "Script not found in cache or expired"}, status=status.HTTP_404_NOT_FOUND)
-#
-#         character_id = cached_data.get('characterId')
-#         scenes = cached_data.get('scenes', [])
-#         user_id = None
-#
-#         if not character_id or not scenes:
-#             return Response({"error": "Invalid script data in cache"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-#
-#         try:
-#             character_instance = Character.objects.get(id=character_id)
-#         except Character.DoesNotExist:
-#             return Response({"error": f"Character with id {character_id} not found"}, status=status.HTTP_404_NOT_FOUND)
-#
-#         scene_tasks = []
-#         for scene in scenes:
-#             prompt = scene.get('rewriting_prompt')
-#             scene_id = scene.get('sceneId')
-#             title = f"{character_instance.characterName} - Scene {scene_id}"
-#             if prompt:
-#                 scene_tasks.append(
-#                     create_video_for_scene.s(character_id=character_id, prompt=prompt, title=title, channel_id=channel_id)
-#                 )
-#
-#         if not scene_tasks:
-#             return Response({"error": "No scenes with prompts found to generate videos."}, status=status.HTTP_400_BAD_REQUEST)
-#
-#         final_output_title = f"{character_instance.characterName}_FullStory"
-#
-#         from celery import chord
-#         
-#         callback = combine_videos_task.s(
-#             output_title=final_output_title,
-#             user_id=user_id,
-#             character_id=character_id,
-#             channel_id=channel_id
-#         )
-#         
-#         chord(scene_tasks)(callback)
-#
-#         # 작업 시작 이벤트 전송
-#         send_event(channel_id, 'message', {'status': 'process_started', 'message': f'Full story generation started for {character_instance.characterName}.'})
-#
-#         return Response({"channel_id": channel_id}, status=status.HTTP_202_ACCEPTED)
+    def get(self, request, channel_id, *args, **kwargs):
+        def event_stream():
+            pubsub = redis_client.pubsub()
+            pubsub.subscribe(channel_id)
+            # 클라이언트 연결 유지 및 Redis 메시지 대기
+            for message in pubsub.listen():
+                if message['type'] == 'message':
+                    data = json.loads(message['data'].decode('utf-8'))
+                    # SSE 형식으로 데이터 전송
+                    yield f"data: {json.dumps(data)}\n\n"
+                    # 'close' 상태 메시지를 받으면 연결 종료
+                    if data.get('status') == 'failed' or data.get('status') == 'success':
+                        break
+        
+        response = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
+        response['Cache-Control'] = 'no-cache'
+        return response

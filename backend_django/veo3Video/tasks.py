@@ -4,7 +4,17 @@ import subprocess
 from .veo_service import generate_signed_url, generate_video_from_text
 from .models import Video
 from characters.models import Character
-from django_eventstream import send_event
+import redis
+import json
+from django.conf import settings
+
+# Redis 클라이언트 초기화
+# settings.py에서 REDIS_HOST와 REDIS_PORT를 가져와 사용합니다.
+# Redis 클라이언트 초기화
+# 환경 변수에서 REDIS_HOST와 REDIS_PORT를 가져와 사용합니다。
+REDIS_HOST = os.getenv("REDIS_HOST", "backend-redis")
+REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
+redis_client = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, db=0)
 from google.cloud import storage
 import tempfile
 from datetime import datetime
@@ -21,7 +31,7 @@ def create_video_for_scene(character_id, prompt, title, channel_id):
     Celery 작업으로 비디오 생성을 비동기적으로 처리하고 SSE로 진행 상황을 알립니다.
     """
     try:
-        send_event(channel_id, 'message', {'status': 'scene_creation_started', 'title': title})
+        redis_client.publish(channel_id, json.dumps({'status': 'scene_creation_started', 'title': title}))
 
         video_generation_result = generate_video_from_text(
             prompt=prompt,
@@ -49,11 +59,11 @@ def create_video_for_scene(character_id, prompt, title, channel_id):
         print(f"Video metadata saved to DB: {title}")
         print("영상생성이 완료되었습니다!")
 
-        send_event(channel_id, 'message', {
+        redis_client.publish(channel_id, json.dumps({
             'status': 'scene_creation_success',
             'title': title,
             'gcs_uri': final_gcs_uri
-        })
+        }))
         # combine_videos_task로 전달할 결과 반환
         return {
             "status": "success",
@@ -65,19 +75,19 @@ def create_video_for_scene(character_id, prompt, title, channel_id):
     except Character.DoesNotExist:
         # 실패 시에도 명확한 상태를 반환하도록 수정
         print(f"Error: Character with id {character_id} not found.")
-        send_event(channel_id, 'message', {
+        redis_client.publish(channel_id, json.dumps({
             'status': 'scene_creation_failed',
             'title': title,
             'error': error_reason,
-        })
+        }))
         return {"status": "failure", "reason": f"Character with id {character_id} not found.", "title": title}
     except Exception as e:
         error_message = f"Error in create_video_for_scene for title '{title}': {e}"
-        send_event(channel_id, 'message', {
+        redis_client.publish(channel_id, json.dumps({
             'status': 'scene_creation_failed',
             'title': title,
             'error': str(e),
-        })
+        }))
     raise
 
 @shared_task(bind=True)
@@ -100,15 +110,15 @@ def combine_videos_task(self, results, output_title, user_id=None, character_id=
 
     if failed_scenes:
         error_reason = f"Failed to generate scenes: {', '.join(failed_scenes)}"
-        send_event(channel_id, 'message', {'status': 'error', 'message': error_reason})
-        send_event(channel_id, 'close', {'status': 'failed'})
+        redis_client.publish(channel_id, json.dumps({'status': 'error', 'message': error_reason}))
+        redis_client.publish(channel_id, json.dumps({'status': 'failed', 'message': 'Combination failed, closing connection'}))
         self.update_state(state='FAILURE', meta={'reason': error_reason})
         raise Exception(error_reason)
 
-    send_event(channel_id, 'message', {
+    redis_client.publish(channel_id, json.dumps({
         'status': 'combination_started',
         'message': 'All scenes generated. Starting combination.'
-    })
+    }))
 
 
     storage_client = storage.Client()
@@ -130,10 +140,10 @@ def combine_videos_task(self, results, output_title, user_id=None, character_id=
             blob.download_to_filename(temp_file.name)
             print(f"Downloaded {uri} to {temp_file.name}")
 
-        send_event(channel_id, 'message',
-                   {'status': 'combination_progress',
+        redis_client.publish(channel_id, json.dumps({
+                   'status': 'combination_progress',
                     'message': 'Downloaded all videos. Combining with FFmpeg.'
-                    })
+                    }))
 
         # 2. FFmpeg를 사용하여 비디오 합치기
         # FFmpeg concat demuxer를 위한 파일 목록 생성
@@ -159,9 +169,10 @@ def combine_videos_task(self, results, output_title, user_id=None, character_id=
         subprocess.run(ffmpeg_command, check=True, capture_output=True)
         print(f"Combined video saved to {combined_video_path.name}")
 
-        send_event(channel_id, 'message',
-                   {'status': 'combination_progress',
-                    'message': 'Combination complete. Uploading to GCS.'})
+        redis_client.publish(channel_id, json.dumps({
+                   'status': 'combination_progress',
+                    'message': 'Combination complete. Uploading to GCS.'
+                    }))
 
         # 3. 합쳐진 비디오를 GCS에 업로드
         base_output_name = output_title.replace(' ', '_')
@@ -210,22 +221,22 @@ def combine_videos_task(self, results, output_title, user_id=None, character_id=
 
         character_instance = Character.objects.get(id=character_id)
 
-        send_event(channel_id, 'message', {
+        redis_client.publish(channel_id, json.dumps({
             'status': 'process_completed',
             'message': '영상생성이 완료되었습니다!',
             'video_url': signed_url,
             'video_title': video_instance.title,
             'character_name': character_instance.characterName
-        })
-        send_event(channel_id, 'close', {'status': 'success'})
+        }))
+        redis_client.publish(channel_id, json.dumps({'status': 'success', 'message': 'Combination completed successfully, closing connection'}))
 
         return {"status": "success", "gcs_uri": final_gcs_uri, "signed_url": signed_url}
 
     except Exception as e:
         error_message = f"Error combining videos: {e}"
         print(error_message)
-        send_event(channel_id, 'message', {'status': 'error', 'message': error_message})
-        send_event(channel_id, 'close', {'status': 'failed'})
+        redis_client.publish(channel_id, json.dumps({'status': 'error', 'message': error_message}))
+        redis_client.publish(channel_id, json.dumps({'status': 'failed', 'message': 'Task failed, closing connection'}))
         raise
     finally:
         # 5. 임시 파일 정리

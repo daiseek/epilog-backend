@@ -5,14 +5,13 @@ from .views import (
     BookmarkedVideoListView, 
     ScriptCacheView, 
     VideoDeleteView,
-    EventTestView
+    VideoEventStreamView
 )
 
 
 urlpatterns = [
     # SSE events stream
-    path('events/', include('django_eventstream.urls')),
-    path('events/<str:channels>/', include('django_eventstream.urls')),
+    path('events/<str:channel_id>/', VideoEventStreamView.as_view(), name='video_event_stream'),
     # Video list and creation
     path('', VideoListView.as_view(), name='list_videos'),
 
@@ -25,6 +24,4 @@ urlpatterns = [
 
     # Script caching
     path('cache-script/', ScriptCacheView.as_view(), name='cache_script'),
-
-    path('test-event/', EventTestView.as_view(), name='event-test')
 ]
