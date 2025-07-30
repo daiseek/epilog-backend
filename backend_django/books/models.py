@@ -14,6 +14,7 @@ class Book(models.Model):
     title = models.CharField(max_length=255) # 책 제목
     content = models.TextField(max_length=1000, null=True, blank=True) # 책 내용 (처리 완료 후 채워짐)
     pdf_url = models.URLField(max_length=500, null=True, blank=True) # S3에 저장된 PDF URL
+    cover_url = models.URLField(max_length=500, null=True, blank=True) # 책 표지 이미지 URL (관리자 전용)
     processing_status = models.CharField(
         max_length=20, 
         choices=PROCESSING_STATUS_CHOICES, 

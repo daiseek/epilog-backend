@@ -373,7 +373,7 @@ class BookOfficialView(APIView):
     )
     def get(self, request):
         # 삭제되지 않은 모든 책 조회 (사용자별 필터링 없음)
-        books = Book.objects.filter(is_deleted=False).only('id', 'title', 'content')
+        books = Book.objects.filter(is_deleted=False).only('id', 'title', 'content', 'pdf_url', 'cover_url')
         
         # print(f"📚 인증된 사용자 {request.user.username}이 책 {books.count()}개 조회")
 

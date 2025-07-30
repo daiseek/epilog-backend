@@ -33,6 +33,7 @@ class BookOfficialResponseSerializer(serializers.Serializer):
     title = serializers.CharField()
     content = serializers.CharField()
     pdf_url = serializers.SerializerMethodField()
+    cover_url = serializers.URLField()
     
     def get_pdf_url(self, obj):
         return obj.pdf_url
@@ -66,6 +67,7 @@ class BookStatusResponseSerializer(serializers.Serializer):
     task_id = serializers.CharField(help_text="Celery 태스크 ID", allow_null=True)
     content = serializers.CharField(help_text="책 내용 요약", allow_null=True)
     pdf_url = serializers.CharField(help_text="PDF 파일 URL", allow_null=True)
+    cover_url = serializers.CharField(help_text="책 표지 이미지 URL", allow_null=True)
     error_message = serializers.CharField(help_text="오류 메시지", allow_null=True)
     created_at = serializers.DateTimeField(help_text="생성일시")
     updated_at = serializers.DateTimeField(help_text="수정일시")
@@ -82,3 +84,4 @@ class BookSuccessResponseSerializer(serializers.Serializer):
     title = serializers.CharField(help_text="책 제목")
     content = serializers.CharField(help_text="책 내용 요약")
     pdf_url = serializers.CharField(help_text="PDF 파일 URL", allow_null=True)
+    cover_url = serializers.CharField(help_text="책 표지 이미지 URL", allow_null=True)
