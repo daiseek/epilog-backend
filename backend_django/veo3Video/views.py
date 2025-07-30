@@ -148,7 +148,6 @@ class VideoListView(APIView):
 
         character_id = cached_data.get('characterId')
         scenes = cached_data.get('scenes', [])
-        user_id = None
 
         if not character_id or not scenes:
             return Response({"error": "Invalid script data in cache"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -259,6 +258,7 @@ class VideoEventStreamView(APIView):
                     data = json.loads(message['data'].decode('utf-8'))
                     # SSE 형식으로 데이터 전송
                     yield f"data: {json.dumps(data)}\n\n"
+                    time.sleep(0.01) # 버퍼링 방지를 위한 짧은 지연
                     # 'close' 상태 메시지를 받으면 연결 종료
                     if data.get('status') == 'failed' or data.get('status') == 'success':
                         break
