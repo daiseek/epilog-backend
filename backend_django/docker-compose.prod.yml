@@ -35,14 +35,17 @@ services:
     ports:
       - "5672:5672" # AMQP 프로토콜 포트
       - "15672:15672" # 관리자 UI 포트
+      - "15692:15692" # Prometheus 메트릭 포트
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    restart: always
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 30s
       timeout: 10s
       retries: 5
+    tty: true
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.rabbitmq.rule=Host(`rabbitmq.epi-log.site`)"
