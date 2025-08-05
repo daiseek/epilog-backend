@@ -341,6 +341,12 @@ def extract_characters_from_chunk_task(chunk):
     try:
         logger.info(f"🤖 청크 {chunk_number} 처리 시작...")
         
+        # ⭐ Gemini API 요청 횟수가 제한되는지 확인하는 로그
+        import time
+        start_time = time.time()
+        logger.info(f"🤖 청크 {chunk_number} Gemini API 호출 시작...")
+        
+
         # extract_characters_from_chunk_with_retry 함수를 호출합니다.
         chunk_characters = extract_characters_from_chunk_with_retry(
             chunk['text'],
