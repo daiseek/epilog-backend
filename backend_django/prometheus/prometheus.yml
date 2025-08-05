@@ -38,3 +38,8 @@ scrape_configs:
     metrics_path: "/metrics" #RabbitMQ Prometheus Exporter 메트릭 경로
     static_configs:
       - targets: ["backend-rabbitmq:15692"] #RabbitMQ Exporter 서비스 이름과 포트
+
+  - job_name: "backend-redis" #Redis 메트릭 수집
+    metrics_path: "/metrics" #Redis Exporter 메트릭 경로
+    static_configs:
+      - targets: ["backend-redis-exporter:9121"] #Redis Exporter 서비스 이름과 포트

@@ -27,6 +27,20 @@ services:
       - "26379:6379"
     networks:
       - backend-net
+    restart: always
+
+  backend-redis-exporter:
+    image: oliver006/redis_exporter:latest # 이미지
+    container_name: backend-redis-exporter
+    environment:
+      - REDIS_ADDR=backend-redis:6379 # 레디스 주소. 여기로 데이터를 받아옵니다. <host_ip>:<port>
+    ports:
+      - "9121:9121" #포트 9121 매핑
+    networks:
+      - app-network #프로메테우스, redis, 등등과 같은 네트워크
+    labels:
+      - "logging=promtail"
+      - "logging_jobname=redis-exporter"
 
   # RabbitMQ 서비스 설정
   backend-rabbitmq:
