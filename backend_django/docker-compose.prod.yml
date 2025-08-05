@@ -37,7 +37,7 @@ services:
     ports:
       - "9121:9121" #포트 9121 매핑
     networks:
-      - app-network #프로메테우스, redis, 등등과 같은 네트워크
+      - backend-net #프로메테우스, redis, 등등과 같은 네트워크
     labels:
       - "logging=promtail"
       - "logging_jobname=redis-exporter"
