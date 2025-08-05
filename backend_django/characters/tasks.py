@@ -1,4 +1,4 @@
-from celery import shared_task
+from celery import shared_task, group, chord
 from celery.utils.log import get_task_logger
 from django.core.cache import caches
 from .models import Character, CharacterScene
