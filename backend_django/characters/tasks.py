@@ -366,7 +366,114 @@ def extract_characters_from_chunk_task(chunk):
 
 
 # ====================================================================
-# [새로운 콜백 태스크] - 모든 청크의 결과를 병합하고 DB에 저장
+# [새로운 워커 태스크] - 캐릭터별 장면 생성 (병렬 처리)
+# ====================================================================
+@shared_task
+def create_character_with_scenes_task(char_data, book_id, task_id, char_index, total_chars):
+    """
+    하나의 캐릭터에 대해 DB 생성 + 장면 생성을 수행하는 태스크.
+    이 태스크는 병렬로 여러 개 실행됩니다.
+    """
+    from books.models import Book
+    
+    char_name = char_data.get('characterName', 'Unknown')
+    
+    try:
+        logger.info(f"🎭 캐릭터 '{char_name}' 생성 시작... ({char_index+1}/{total_chars})")
+        
+        # 1. Book 조회
+        book = Book.objects.get(id=book_id)
+        
+        # 2. Character DB 생성
+        character = Character.objects.create(
+            characterName=char_data['characterName'],
+            isMain=char_data['isMain'],
+            age=char_data['age'],
+            gender=char_data['gender'],
+            characterDescription=char_data['characterDescription'],
+            book=book
+        )
+        
+        # 3. Gemini API로 장면 생성 (병렬 처리되므로 각자 독립적으로 실행)
+        scenes = create_character_scenes_with_retry(char_data, book.content)
+        scene_data = []
+        
+        # 4. CharacterScene DB 생성
+        for scene_info in scenes:
+            scene = CharacterScene.objects.create(
+                character=character,
+                scene_content=scene_info.get('scene_content', ''),
+                start_page=scene_info.get('start_page', 1),
+                finish_page=scene_info.get('finish_page', 10)
+            )
+            scene_data.append({
+                'id': scene.id,
+                'scene_content': scene.scene_content,
+                'start_page': scene.start_page,
+                'finish_page': scene.finish_page,
+            })
+        
+        # 5. 결과 반환
+        character_result = {
+            'id': character.id,
+            'characterName': character.characterName,
+            'isMain': character.isMain,
+            'age': character.age,
+            'gender': character.gender,
+            'characterDescription': character.characterDescription,
+            'scenes': scene_data
+        }
+        
+        logger.info(f"✅ 캐릭터 '{char_name}' 생성 완료 - {len(scene_data)}개 장면")
+        return character_result
+        
+    except Exception as e:
+        logger.error(f"❌ 캐릭터 '{char_name}' 생성 실패: {str(e)}")
+        # 실패 시 예외를 다시 발생시켜 Celery가 실패로 기록하도록 합니다.
+        raise
+
+
+# ====================================================================
+# [새로운 콜백 태스크] - 최종 집계 및 완료 처리
+# ====================================================================
+@shared_task
+def finalize_character_creation_task(all_character_results, book_id, task_id):
+    """
+    모든 캐릭터 생성 태스크가 완료된 후 최종 집계 및 완료 처리를 담당합니다.
+    """
+    script_cache = caches['script_cache']
+    task_key = f"character_task:{task_id}"
+    
+    try:
+        logger.info(f"📊 최종 집계 시작 - Book ID: {book_id}")
+        
+        # all_character_results는 각 캐릭터 태스크의 결과 리스트
+        successful_characters = [result for result in all_character_results if result is not None]
+        
+        # 완료 상태 저장 및 이벤트 전송
+        completed_data = {
+            "status": "COMPLETED", 
+            "book_id": book_id,
+            "total_characters": len(successful_characters),
+            "completed_at": datetime.datetime.now().isoformat(),
+            "message": "캐릭터 생성이 완료되었습니다."
+        }
+        script_cache.set(task_key, completed_data, timeout=7200)
+        send_character_task_event(task_id, "completed", completed_data)
+        
+        logger.info(f"✅ [TASK COMPLETE] 캐릭터 생성 최종 완료 - Task ID: {task_id}, 생성된 캐릭터: {len(successful_characters)}명")
+        return {"status": "success", "task_id": task_id, "characters_created": len(successful_characters)}
+        
+    except Exception as e:
+        error_msg = f"최종 집계 중 오류 발생: {str(e)}"
+        logger.error(f"❌ [ERROR] {error_msg}")
+        script_cache.set(task_key, {"status": "FAILED", "error_message": error_msg}, timeout=7200)
+        send_character_task_event(task_id, "error", {"message": error_msg})
+        raise
+
+
+# ====================================================================
+# [리팩토링된 콜백 태스크] - 캐릭터 병합 및 병렬 장면 생성 오케스트레이터
 # ====================================================================
 @shared_task
 def merge_and_save_characters_task(all_chunk_characters_list, book_id, task_id):
@@ -399,81 +506,26 @@ def merge_and_save_characters_task(all_chunk_characters_list, book_id, task_id):
         
         logger.info(f"✅ 최종 선택된 캐릭터 수: {len(final_characters)}명")
 
-        # 3. 장면 생성 및 DB 저장 (기존 코드 로직 이동)
+        # 3. 🚀 병렬 장면 생성 워크플로우 시작
         script_cache.set(task_key, {
-            "status": "PROCESSING", "book_id": book_id, "step": "scene_generation",
+            "status": "PROCESSING", "book_id": book_id, "step": "parallel_scene_generation",
             "total_characters": len(final_characters), "processed_characters": 0,
-            "message": f"장면 생성 및 저장 중... (0/{len(final_characters)})"
+            "message": f"병렬 장면 생성 시작... (0/{len(final_characters)})"
         }, timeout=7200)
-        send_character_task_event(task_id, "progress", {"message": f"장면 생성 및 저장 중...", "step": "scene_generation"})
+        send_character_task_event(task_id, "progress", {"message": f"병렬 장면 생성 시작...", "step": "parallel_scene_generation"})
         
-        book = Book.objects.get(id=book_id)
-        created_characters = []
-        for i, char_data in enumerate(final_characters):
-            # SSE 이벤트 전송: 캐릭터별 진행 상황 (기존 로직)
-            try:
-                send_character_task_event(task_id, "progress", {
-                    "message": f"장면 생성 및 저장 중... ({i+1}/{len(final_characters)})",
-                    "step": "scene_generation", "total_characters": len(final_characters),
-                    "processed_characters": i+1, "current_character": char_data['characterName']
-                })
-            except Exception as e:
-                logger.error(f"❌ SSE 이벤트 전송 실패: {str(e)}")
-
-            try:
-                # 캐릭터 생성
-                character = Character.objects.create(
-                    characterName=char_data['characterName'], isMain=char_data['isMain'],
-                    age=char_data['age'], gender=char_data['gender'],
-                    characterDescription=char_data['characterDescription'], book=book
-                )
-                
-                # 장면 생성 (API 호출 간격 조절로 Rate Limit 방지)
-                if i > 0:  # 첫 번째 캐릭터가 아닌 경우
-                    print(f"⏱️ API 호출 간격 조절 - 1초 대기... ({i+1}/{len(final_characters)})")
-                    time.sleep(1)
-                
-                scenes = create_character_scenes_with_retry(char_data, book.content)
-                scene_data = []
-                
-                for scene_info in scenes:
-                    scene = CharacterScene.objects.create(
-                        character=character,
-                        scene_content=scene_info.get('scene_content', ''),
-                        start_page=scene_info.get('start_page', 1),
-                        finish_page=scene_info.get('finish_page', 10)
-                    )
-                    scene_data.append({
-                        'id': scene.id,
-                        'scene_content': scene.scene_content,
-                        'start_page': scene.start_page,
-                        'finish_page': scene.finish_page,
-                    })
-                
-                created_characters.append({
-                    'id': character.id, 'characterName': character.characterName,
-                    'isMain': character.isMain, 'age': character.age,
-                    'gender': character.gender, 'characterDescription': character.characterDescription
-                })
-                
-                logger.info(f"✅ 캐릭터 '{character.characterName}' 생성 완료 - {len(scene_data)}개 장면")
-                
-            except Exception as e:
-                logger.error(f"❌ 캐릭터 '{char_data['characterName']}' 생성 실패: {str(e)}")
-                continue
-            
-        # 4. 완료 상태 저장 및 이벤트 전송
-        completed_data = {
-            "status": "COMPLETED", "book_id": book_id,
-            "total_characters": len(created_characters),
-            "completed_at": datetime.datetime.now().isoformat(),
-            "message": "캐릭터 생성이 완료되었습니다."
-        }
-        script_cache.set(task_key, completed_data, timeout=7200)
-        send_character_task_event(task_id, "completed", completed_data)
+        # 4. 캐릭터별 장면 생성 태스크를 그룹으로 묶어 병렬 실행
+        character_tasks_group = group(
+            create_character_with_scenes_task.s(char_data, book_id, task_id, i, len(final_characters))
+            for i, char_data in enumerate(final_characters)
+        )
         
-        logger.info(f"✅ [TASK COMPLETE] 캐릭터 생성 최종 완료 - Task ID: {task_id}")
-        return {"status": "success", "task_id": task_id, "characters_created": len(created_characters)}
+        # 5. 모든 캐릭터 생성이 끝난 후, 최종 집계를 수행하는 콜백 태스크 실행
+        final_callback = finalize_character_creation_task.s(book_id, task_id)
+        character_workflow = chord(character_tasks_group)(final_callback)
+        
+        logger.info(f"🚀 병렬 캐릭터 생성 워크플로우 시작됨. Workflow ID: {character_workflow.id}")
+        return {"status": "success", "task_id": task_id, "workflow_id": str(character_workflow.id), "characters_to_create": len(final_characters)}
     
     except Book.DoesNotExist:
         error_msg = f"책을 찾을 수 없습니다 - ID: {book_id}"
