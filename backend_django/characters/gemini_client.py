@@ -836,9 +836,9 @@ JSON 형식:
 
     for retry_count in range(max_retries + 1):
         try:
-            # API 호출 간격 조절 (Rate Limit 방지)
-            if retry_count == 0:
-                time.sleep(random.uniform(0.5, 1.5))
+            # API 호출 간격 조절 (Rate Limit 방지) - 병렬 처리에서는 불필요하므로 주석 처리
+            # if retry_count == 0:
+            #     time.sleep(random.uniform(0.5, 1.5))
             
             print(f"🎬 '{character['characterName']}' 장면 생성 시작... (시도 {retry_count + 1}/{max_retries + 1})")
             

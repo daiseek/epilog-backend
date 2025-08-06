@@ -105,10 +105,10 @@ def generate_script_task(self, character_id, scene_count=3, script_id=None):
         
         logger.info(f"📝 [TASK START] 대본 생성 시작 - Character ID: {character_id}, Task ID: {task_id}")
         
-        # 클라이언트 연결 시간 확보를 위한 지연 (3초)
-        print(f"[DEBUG] 클라이언트 연결 대기 중... (3초)")
-        import time
-        time.sleep(3)
+        # 클라이언트 연결 시간 확보를 위한 지연 (3초) - 병렬 처리에서는 불필요하므로 주석 처리
+        # print(f"[DEBUG] 클라이언트 연결 대기 중... (3초)")
+        # import time
+        # time.sleep(3)
         
         # Character 조회
         character = Character.objects.get(id=character_id, is_deleted=False)
@@ -562,7 +562,7 @@ def generate_characters_task(self, book_id):
         script_cache.set(task_key, init_data, timeout=7200)
         book = Book.objects.get(id=book_id)
         send_character_task_event(task_id, "started", {"message": "캐릭터 생성 시작됨", "book_id": book_id, "book_title": book.title})
-        time.sleep(3) # 클라이언트 연결 대기
+        # time.sleep(3) # 클라이언트 연결 대기 - 병렬 처리에서는 불필요하므로 주석 처리
 
         # 2. PDF 다운로드 및 청킹 (기존 코드와 동일)
         send_character_task_event(task_id, "progress", {"message": "PDF 다운로드 및 청킹 중...", "step": "pdf_processing", "book_title": book.title})
