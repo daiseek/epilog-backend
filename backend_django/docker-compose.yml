@@ -60,6 +60,7 @@ services:
       # - /home/ubuntu/gcp-key.json:/app/gcp-key.json # GCP veo 키 파일 절대 경로로 마운트
     ports:
       - "28000:8000"
+      - "8089:8089" # Locust 웹 UI 포트
     depends_on:
       backend-database:
         condition: service_healthy
