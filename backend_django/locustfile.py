@@ -161,7 +161,7 @@ class EpiLogUser(HttpUser):
                 "/users/login/",
                 json=login_data,
                 headers={'Content-Type': 'application/json'},
-                name="🔐 로그인"
+                name="로그인"
             )
             
             if login_response.status_code == 200:
