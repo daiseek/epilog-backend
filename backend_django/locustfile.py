@@ -161,7 +161,7 @@ class EpiLogUser(HttpUser):
                 "/users/login/",
                 json=login_data,
                 headers={'Content-Type': 'application/json'},
-                name="로그인"
+                name="🔐 로그인"
             )
             
             if login_response.status_code == 200:
@@ -223,7 +223,7 @@ class EpiLogUser(HttpUser):
                 files=files,
                 data=data,
                 headers={'Authorization': f'Bearer {self.auth_token}'},
-                name="책 PDF 업로드"
+                name="📚 책 PDF 업로드"
             )
             
             if upload_response.status_code == 201:
@@ -238,7 +238,7 @@ class EpiLogUser(HttpUser):
             self.client.get(
                 "/books/official",
                 headers=self.get_auth_headers(),
-                name="공용책 정보 조회"
+                name="공용책 목록 조회"
             )
             
         except Exception as e:
@@ -254,7 +254,7 @@ class EpiLogUser(HttpUser):
         self.client.get(
             "/books/official",
             headers=self.get_auth_headers(),
-            name="공용책 정보 조회"
+            name="공용책 목록 조회"
         )
     
     @task(8)
@@ -320,7 +320,7 @@ class EpiLogUser(HttpUser):
         self.client.get(
             f"/books/{self.book_id}/characters/async",
             headers=self.get_auth_headers(),
-            name="캐릭터 비동기 조회"
+            name="캐릭터 상태 확인"
         )
 
 
@@ -390,7 +390,7 @@ class EpiLogUser(HttpUser):
         self.client.get(
             f"/characters/{self.character_id}/scripts/async",
             headers=self.get_auth_headers(),
-            name="대본 조회"
+            name="📄 대본 목록 조회"
         )
     
     @task(1)
@@ -429,12 +429,13 @@ class ReadOnlyUser(HttpUser):
         }
         
         # 회원가입 시도
-        self.client.post("/users/signup/", json=signup_data)
+        self.client.post("/users/signup/", json=signup_data, name="읽기전용 회원가입")
         
         # 로그인
         login_response = self.client.post(
             "/users/login/",
-            json={"login_id": signup_data["login_id"], "password": signup_data["password"]}
+            json={"login_id": signup_data["login_id"], "password": signup_data["password"]},
+            name="읽기전용 로그인"
         )
         
         if login_response.status_code == 200:
@@ -449,13 +450,13 @@ class ReadOnlyUser(HttpUser):
     def read_books(self):
         """책 정보 조회"""
         if self.auth_token:
-            self.client.get("/books/official", headers=self.get_auth_headers())
+            self.client.get("/books/official", headers=self.get_auth_headers(), name="읽기전용 책조회")
     
     @task(8)
     def read_user_info(self):
         """사용자 정보 조회"""
         if self.auth_token:
-            self.client.get("/users/me/", headers=self.get_auth_headers())
+            self.client.get("/users/me/", headers=self.get_auth_headers(), name="읽기전용 사용자정보")
 
 
 class HeavyWorkloadUser(HttpUser):
@@ -480,11 +481,12 @@ class HeavyWorkloadUser(HttpUser):
             "nickname": f"헤비유저_{self.user_id}"
         }
         
-        self.client.post("/users/signup/", json=signup_data)
+        self.client.post("/users/signup/", json=signup_data, name="헤비유저 회원가입")
         
         login_response = self.client.post(
             "/users/login/",
-            json={"login_id": signup_data["login_id"], "password": signup_data["password"]}
+            json={"login_id": signup_data["login_id"], "password": signup_data["password"]},
+            name="헤비유저 로그인"
         )
         
         if login_response.status_code == 200:
@@ -517,7 +519,7 @@ class HeavyWorkloadUser(HttpUser):
             files=files,
             data=data,
             headers={'Authorization': f'Bearer {self.auth_token}'},
-            name="무거운 책 업로드 (비동기)"
+            name="헤비 책 업로드 (비동기)"
         )
         
         if response.status_code == 201:
@@ -533,7 +535,7 @@ class HeavyWorkloadUser(HttpUser):
         with self.client.post(
             f"/books/{self.book_id}/characters/async",
             headers=self.get_auth_headers(),
-            name="무거운작업_캐릭터 조회/생성 (비동기)",
+            name="헤비 캐릭터 조회/생성 (비동기)",
             catch_response=True,
         ) as resp:
             if resp.status_code == 200:
@@ -582,7 +584,7 @@ class HeavyWorkloadUser(HttpUser):
             f"/characters/{self.character_id}/scripts/async",
             json=script_data,
             headers=self.get_auth_headers(),
-            name="무거운작업_대본 생성 (비동기)",
+            name="헤비 대본 생성 (비동기)",
             catch_response=True,
         ) as resp:
             if 200 <= resp.status_code < 300:
