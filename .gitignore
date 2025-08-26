@@ -231,3 +231,6 @@ gcp-key.json
 
 # locust logs
 locust_*
+
+# test_pdfs
+*.pdf
