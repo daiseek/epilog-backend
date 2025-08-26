@@ -228,3 +228,6 @@ acme.json
 
 # 
 gcp-key.json
+
+# locust logs
+locust_*
