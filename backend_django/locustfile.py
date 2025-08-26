@@ -219,14 +219,14 @@ class EpiLogUser(HttpUser):
             }
             
             upload_response = self.client.post(
-                "/books/pdf",
+                "/books/pdf/async",
                 files=files,
                 data=data,
                 headers={'Authorization': f'Bearer {self.auth_token}'},
-                name="📚 책 PDF 업로드"
+                name="책 PDF 업로드 (비동기)"
             )
             
-            if upload_response.status_code == 201:
+            if upload_response.status_code == 202:
                 response_data = upload_response.json()
                 self.book_id = response_data.get("id")
                 print(f"책 업로드 성공: ID {self.book_id}")
@@ -522,7 +522,7 @@ class HeavyWorkloadUser(HttpUser):
             name="헤비 책 업로드 (비동기)"
         )
         
-        if response.status_code == 201:
+        if response.status_code == 202:
             self.book_id = response.json().get("id")
     
     @task(3)
