@@ -38,3 +38,6 @@ channels-redis
 
 channels_rabbitmq
 
+# 부하테스트용
+locust>=2.0.0
+
