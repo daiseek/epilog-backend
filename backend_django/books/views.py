@@ -485,6 +485,141 @@ class BookCharactersView(APIView):
             }, status=500)
 
 
+''' 책 PDF 업로드 API (asyncio 비동기) '''
+class BookFromPdfAsyncioView(APIView):
+    parser_classes = [MultiPartParser, FormParser]
+    permission_classes = [IsAuthenticated]  # JWT 인증 필요
+
+    @swagger_auto_schema(
+        operation_description="""PDF 파일을 업로드하여 책을 asyncio로 비동기 생성합니다. (JWT 인증 필요)
+        
+        처리 과정:
+        1. 즉시 책 레코드 생성 및 응답 반환
+        2. 백그라운드에서 asyncio로 PDF 처리:
+           - PDF에서 텍스트 추출 (비동기)
+           - Gemini API 요약과 S3 업로드를 병렬 실행
+           - DB에 최종 정보 업데이트
+        
+        Celery 대비 asyncio 장점:
+        - I/O bound 작업의 병렬 처리로 더 빠른 성능
+        - 메모리 효율성 향상
+        - 별도 브로커(RabbitMQ) 불필요
+        
+        가능한 오류:
+        - 400: PDF 파일 누락, 잘못된 형식
+        - 401: 인증 필요
+        - 500: 초기 처리 실패
+        """,
+        manual_parameters=[
+            openapi.Parameter(
+                'title',
+                openapi.IN_FORM,
+                description="책 제목",
+                type=openapi.TYPE_STRING,
+                required=True
+            ),
+            openapi.Parameter(
+                'pdf',
+                openapi.IN_FORM,
+                description="PDF 파일",
+                type=openapi.TYPE_FILE,
+                required=True
+            ),
+        ],
+        responses={
+            202: BookAsyncUploadResponseSerializer,
+            400: BookErrorResponseSerializer,
+            401: openapi.Response(description="인증 필요"),
+            500: BookErrorResponseSerializer
+        },
+        tags=['책 관리 (AsyncIO)'],
+        consumes=['multipart/form-data']
+    )
+    def post(self, request):
+        print("📝 AsyncIO PDF 업로드 요청 시작")
+        print("👤 요청 사용자:", request.user.username if request.user.is_authenticated else "익명")
+
+        serializer = BookPdfUploadSerializer(data=request.data)
+        if not serializer.is_valid():
+            print("❌ Serializer 검증 실패:", serializer.errors)
+            return Response({
+                "status": "error",
+                "error_code": 400,
+                "message": "입력 형식이 올바르지 않습니다.",
+                "details": serializer.errors
+            }, status=400)
+
+        title = serializer.validated_data['title']
+        pdf_file = serializer.validated_data['pdf']
+
+        print(f"✅ 검증 완료 - 제목: {title}, 파일명: {pdf_file.name}")
+
+        try:
+            # 1. 즉시 Book 레코드 생성 (PENDING 상태)
+            book = Book.objects.create(
+                title=title,
+                processing_status='PENDING'
+            )
+            print(f"📚 책 레코드 생성 완료 - ID: {book.id}")
+
+            # 2. PDF 파일을 base64로 인코딩
+            pdf_file.seek(0)
+            pdf_content = pdf_file.read()
+            import base64
+            pdf_base64 = base64.b64encode(pdf_content).decode('utf-8')
+            
+            # 3. asyncio 태스크 시작
+            import asyncio
+            import threading
+            from .asyncio_tasks import book_processor
+            
+            # 백그라운드 스레드에서 asyncio 실행
+            def run_async_task():
+                try:
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    loop.run_until_complete(
+                        book_processor.process_book_pdf_async(
+                            book.id, pdf_base64, pdf_file.name
+                        )
+                    )
+                    loop.close()
+                except Exception as e:
+                    print(f"[ERROR] AsyncIO 백그라운드 실행 오류: {str(e)}")
+            
+            # 백그라운드 스레드 시작
+            thread = threading.Thread(target=run_async_task, daemon=True)
+            thread.start()
+            
+            task_id = f"asyncio-{book.id}"
+            print(f"🚀 AsyncIO 처리 시작 - Task ID: {task_id}")
+            
+            # 4. 태스크 ID 저장
+            book.task_id = task_id
+            book.save()
+
+            # 5. 즉시 응답 반환
+            return Response({
+                "book_id": book.id,
+                "title": book.title,
+                "processing_status": book.processing_status,
+                "task_id": task_id,
+                "processing_type": "asyncio",
+                "message": "AsyncIO로 PDF 처리가 시작되었습니다. SSE 연결을 통해 진행 상황을 확인할 수 있습니다."
+            }, status=202)  # 202 Accepted
+
+        except Exception as e:
+            print(f"[ERROR] 초기 처리 중 오류 발생: {str(e)}")
+            print(f"[ERROR] 오류 타입: {type(e).__name__}")
+            import traceback
+            print(f"[ERROR] 상세 스택 트레이스:\n{traceback.format_exc()}")
+
+            return Response({
+                "status": "error",
+                "error_code": 500,
+                "message": f"초기 처리 중 오류가 발생했습니다: {str(e)}"
+            }, status=500)
+
 
 # 책 입력 API 2가지를 정의함
 # ''' 책 텍스트로 입력시 book을 생성하는 API '''
