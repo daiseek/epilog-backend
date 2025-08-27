@@ -571,19 +571,19 @@ class FullPipelineUser(HttpUser):
             # ====== 3단계: 생성된 캐릭터 조회 ======
             print(f"캐릭터 목록 조회")
             
-            character_response = self.client.get(
+            character_response = self.client.post(
                 f"/books/{self.book_id}/characters",
                 headers=self.get_auth_headers(),
                 name="파이프라인_캐릭터조회"
             )
             
-            if character_response.status_code == 200:
+            if character_response.status_code in [200, 201]:
                 characters_data = character_response.json()
-                # BookCharacterResponseSerializer는 리스트로 직접 반환됨
+                # CharacterConditionalCreateOrListView는 직접 리스트를 반환함
                 if isinstance(characters_data, list) and len(characters_data) > 0:
                     selected_character = random.choice(characters_data)
-                    character_id = selected_character.get("character_id")  # character_id로 매핑됨
-                    character_name = selected_character.get("character_name", "Unknown")
+                    character_id = selected_character.get("id")  # CharacterSerializer는 'id' 필드 사용
+                    character_name = selected_character.get("characterName", "Unknown")
                     print(f"캐릭터 선택: ID {character_id}, 이름: {character_name}")
                 else:
                     print(f"3단계 실패: 캐릭터가 없음 - 응답: {characters_data}")
@@ -747,7 +747,7 @@ class FullPipelineUser(HttpUser):
         """생성된 책 상태 확인"""
         if not self.auth_token or not self.book_id:
             return
-            
+
         self.client.get(
             "/books/official",
             headers=self.get_auth_headers(),
@@ -909,7 +909,7 @@ class CharacterFocusedUser(HttpUser):
         if not self.auth_token or not self.book_id:
             return
 
-        self.client.get(
+        self.client.post(
             f"/books/{self.book_id}/characters",
             headers=self.get_auth_headers(),
             name="캐릭터 상태 확인 (캐릭터워커)"
@@ -964,7 +964,7 @@ class ReadOnlyUser(HttpUser):
         """캐릭터가 있는 책 조회 및 book_id 수집"""
         if not self.auth_token:
             return
-        
+            
         # 이미 book_id가 설정되어 있으면 스킵 (중복 호출 방지)
         if self.book_id:
             return
@@ -998,22 +998,22 @@ class ReadOnlyUser(HttpUser):
         if not self.auth_token or not self.book_id:
             return
 
-        with self.client.get(
+        with self.client.post(
             f"/books/{self.book_id}/characters",
             headers=self.get_auth_headers(),
             name="대본용 캐릭터 조회",
             catch_response=True,
         ) as resp:
-            if resp.status_code == 200:
+            if resp.status_code in [200, 201]:
                 resp.success()
                 try:
                     data = resp.json()
-                    # BookCharacterResponseSerializer는 리스트로 직접 반환됨
+                    # CharacterConditionalCreateOrListView는 직접 리스트를 반환함
                     if isinstance(data, list) and len(data) > 0:
                         # 랜덤하게 캐릭터 선택
                         selected_character = random.choice(data)
-                        self.character_id = selected_character.get("character_id")  # character_id로 매핑됨
-                        char_name = selected_character.get("character_name", "Unknown")
+                        self.character_id = selected_character.get("id")  # CharacterSerializer는 'id' 필드 사용
+                        char_name = selected_character.get("characterName", "Unknown")
                         print(f"대본 생성용 캐릭터 선택: ID {self.character_id}, 이름: {char_name}")
                     else:
                         print(f"책 {self.book_id}에 캐릭터가 없음 - 응답: {data}")
@@ -1027,7 +1027,7 @@ class ReadOnlyUser(HttpUser):
         """사용자 정보 조회 (조회 전용)"""
         if not self.auth_token:
             return
-        
+            
         # 조회 전용 사용자는 가벼운 조회 작업만 수행
         self.client.get(
             "/users/me/",
