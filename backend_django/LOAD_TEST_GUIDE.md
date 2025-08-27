@@ -6,30 +6,14 @@
 
 ### ✨ 주요 변경사항
 
-1. **실제 PDF 파일 지원**: Mock PDF 대신 실제 책 파일 업로드
-2. **자동 파일 탐지**: 여러 경로에서 PDF 파일 자동 검색
-3. **랜덤 파일 선택**: 여러 PDF가 있을 때 랜덤하게 선택
-4. **Fallback 처리**: PDF가 없으면 자동으로 Mock PDF 사용
+1. **S3 기반 PDF 통일**: 모든 환경에서 S3에서 PDF 다운로드
+2. **SSE 실시간 알림**: 폴링 대신 SSE로 작업 완료 실시간 감지
+3. **환경 일관성**: 개발/배포 환경에서 동일한 PDF 소스 사용
+4. **Fallback 처리**: S3 다운로드 실패 시 Mock PDF 자동 생성
 
-## 📁 PDF 파일 준비 방법 (3단계 우선순위)
+## 📁 PDF 파일 준비 방법 (S3 통일)
 
-### 1. 🏠 로컬 파일 (1순위 - 권장)
-
-```bash
-# test_pdfs 디렉토리에 PDF 파일 복사
-mkdir -p backend_django/test_pdfs
-cp /path/to/your/book.pdf backend_django/test_pdfs/
-cp /path/to/another/book.pdf backend_django/test_pdfs/sample_book.pdf
-```
-
-권장 파일명:
-
-- `sample_book.pdf`
-- `test_document.pdf`
-- `example_story.pdf`
-- `demo_content.pdf`
-
-### 2. ☁️ S3 직접 업로드 (2순위 - 배포환경 일관성) ⭐ 권장
+### ☁️ S3 직접 업로드 (필수) ⭐
 
 AWS S3에 직접 테스트용 PDF를 업로드하여 로컬/배포 환경에서 동일한 파일 사용:
 
@@ -61,9 +45,9 @@ environment:
   LOADTEST_PDF_URLS: "https://your-bucket.s3.region.amazonaws.com/loadtest/book1.pdf"
 ```
 
-### 3. 🔄 Mock PDF (3순위 - 자동 생성)
+### 🔄 Mock PDF (자동 생성)
 
-위 두 방법이 모두 실패하면 자동으로 Mock PDF 생성
+S3 다운로드 실패 시 자동으로 Mock PDF 생성
 
 ## 🚀 실행 방법
 
