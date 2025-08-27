@@ -8,6 +8,9 @@ from .views import (
     # CharacterGenerateAsyncView,  # books 앱으로 이동
     # CharacterTaskStatusView      # books 앱으로 이동
 )
+from .asyncio_views import (
+    ScriptGenerateAsyncioView
+)
 # EventStream views import (books 앱에서 import)
 # from books.eventstream_views import script_generation_eventstream  # 주석처리됨
 # Streaming 통합 views import
@@ -21,7 +24,8 @@ urlpatterns = [
     
     # === 대본 생성 관련 URL들 (characters 앱에 유지) ===
     path('<int:character_id>/scripts', ScriptGenerateView.as_view()),  # 대본 생성 기능 (동기)
-    path('<int:character_id>/scripts/async', ScriptGenerateAsyncView.as_view()),  # 대본 생성 기능 (비동기)
+    path('<int:character_id>/scripts/async', ScriptGenerateAsyncView.as_view()),  # 대본 생성 기능 (Celery 비동기)
+    path('<int:character_id>/scripts/asyncio', ScriptGenerateAsyncioView.as_view()),  # 대본 생성 기능 (AsyncIO 비동기)
     # path('tasks/<str:task_id>/status', ScriptTaskStatusView.as_view()),  # 대본 생성 상태 확인 (Polling 방식 - 더 이상 사용 안함)
 
     # === 🚀 새로운 스트리밍 통합 API (POST + SSE) ===
