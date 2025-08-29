@@ -229,7 +229,7 @@ services:
     #   - "logging_jobname=containerlogs"
 
     ports:
-      - "9090:9090"  # 부하테스트용 - 직접 포트 접근
+      - "9090:9090" # 부하테스트용 - 직접 포트 접근
     networks:
       - backend-net
 
@@ -298,53 +298,53 @@ services:
 
   # 부하테스트용 - Portainer 관리 서비스 비활성화
   # backend-portainer:
-    image: portainer/portainer-ce:latest
-    container_name: backend-portainer
-    ports:
-      - "29000:9000"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - portainer_data:/data
-    # 부하테스트용 - Traefik 설정 비활성화
-    # labels:
-    #   - "traefik.enable=true"
-    #   - "traefik.http.routers.portainer.rule=Host(`portainer.epi-log.site`)"
-    #   - "traefik.http.routers.portainer.entrypoints=websecure"
-    #   - "traefik.http.routers.portainer.tls=true"
-    #   - "traefik.http.routers.portainer.tls.certresolver=letsencrypt"
-    #   - "traefik.http.services.portainer.loadbalancer.server.port=9000"
-    networks:
-      - backend-net
+  #   image: portainer/portainer-ce:latest
+  #   container_name: backend-portainer
+  #   ports:
+  #     - "29000:9000"
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #     - portainer_data:/data
+  #   # 부하테스트용 - Traefik 설정 비활성화
+  #   # labels:
+  #   #   - "traefik.enable=true"
+  #   #   - "traefik.http.routers.portainer.rule=Host(`portainer.epi-log.site`)"
+  #   #   - "traefik.http.routers.portainer.entrypoints=websecure"
+  #   #   - "traefik.http.routers.portainer.tls=true"
+  #   #   - "traefik.http.routers.portainer.tls.certresolver=letsencrypt"
+  #   #   - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+  #   networks:
+  #     - backend-net
 
   # 부하테스트용 - Loki 로그 수집 서비스 비활성화
   # backend-loki:
-    image: grafana/loki:latest
-    container_name: backend-loki
-    ports:
-      - 23100:3100
-    command: -config.file=/etc/loki/local-config.yaml #기본 설정
-    labels:
-      - "traefik.enable=false" # Traefik에서 제외 (내부 서비스)
-    networks:
-      - backend-net
+  #   image: grafana/loki:latest
+  #   container_name: backend-loki
+  #   ports:
+  #     - 23100:3100
+  #   command: -config.file=/etc/loki/local-config.yaml #기본 설정
+  #   labels:
+  #     - "traefik.enable=false" # Traefik에서 제외 (내부 서비스)
+  #   networks:
+  #     - backend-net
 
   # 부하테스트용 - Promtail 로그 수집 서비스 비활성화
   # backend-promtail:
-    image: grafana/promtail:latest
-    container_name: backend-promtail
-    volumes:
-      - ./promtail/config.yml:/etc/promtail/docker-config.yaml
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro #도커 로그
-      - /var/run/docker.sock:/var/run/docker.sock #도커 소켓 (디몬)
-    command:
-      - -config.file=/etc/promtail/docker-config.yaml #설정파일
-      # - -config.expand-env=true #환경변수 수집용. 안해도 됩니다.
-    labels:
-      - "traefik.enable=false" # Traefik에서 제외 (외부 접근 불필요)
-    depends_on:
-      - backend-loki
-    networks:
-      - backend-net
+  #   image: grafana/promtail:latest
+  #   container_name: backend-promtail
+  #   volumes:
+  #     - ./promtail/config.yml:/etc/promtail/docker-config.yaml
+  #     - /var/lib/docker/containers:/var/lib/docker/containers:ro #도커 로그
+  #     - /var/run/docker.sock:/var/run/docker.sock #도커 소켓 (디몬)
+  #   command:
+  #     - -config.file=/etc/promtail/docker-config.yaml #설정파일
+  #     # - -config.expand-env=true #환경변수 수집용. 안해도 됩니다.
+  #   labels:
+  #     - "traefik.enable=false" # Traefik에서 제외 (외부 접근 불필요)
+  #   depends_on:
+  #     - backend-loki
+  #   networks:
+  #     - backend-net
 
   # cAdvisor 모니터링 서비스 설정 (부하테스트용)
   backend-cadvisor:
@@ -360,7 +360,7 @@ services:
       - /var/lib/docker:/var/lib/docker:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     ports:
-      - "8080:8080"  # 부하테스트용 - 직접 포트 접근
+      - "8080:8080" # 부하테스트용 - 직접 포트 접근
     # 부하테스트용 - Traefik 설정 비활성화 (포트로 직접 접근)
     # labels:
     #   - "traefik.enable=true"
