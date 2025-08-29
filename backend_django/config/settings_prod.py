@@ -38,8 +38,9 @@ DEBUG = env.bool("DEBUG", default=True) # 개발환경에서만 사용
 SECRET_KEY = env('DJANGO_SECRET_KEY') # django 시크릿키는 env에서 관리
 
 
-# ⭐️ 배포용
-ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "").split(",")
+# ⭐️ 부하테스트용 - 모든 호스트 허용
+ALLOWED_HOSTS = ["*"]  # 부하테스트용 임시 설정
+# ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "").split(",")  # 원래 설정
 
 # ⭐️ 배포용
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
