@@ -133,11 +133,11 @@ INSTALLED_APPS = [
     'books', # Books 애플리케이션 추가
     'characters', # Characters 애플리케이션 추가
 
-    'videos2',
-    'veo3Video',
+    # 'videos2',
+    # 'veo3Video',
 
     'users', # Users 애플리케이션 추가
-    'narration', # Narration 애플리케이션 추가
+    # 'narration', # Narration 애플리케이션 추가
 
     # 's3test', # S3 테스트용 앱
 
