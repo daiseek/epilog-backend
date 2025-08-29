@@ -70,9 +70,9 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
 #     "http://127.0.0.1:3000",   # 로컬 프론트엔드
 # ]
 
-# CORS 헤더 설정
+# CORS 헤더 설정 (부하테스트용)
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_ALL_ORIGINS = False  # 보안: 특정 도메인만 허용
+CORS_ALLOW_ALL_ORIGINS = True  # 부하테스트용 - 모든 오리진 허용
 
 # CORS 허용 헤더 (JWT 토큰 전송용)
 CORS_ALLOW_HEADERS = [
@@ -107,11 +107,11 @@ CSRF_TRUSTED_ORIGINS = [
 # 참고: Django REST Framework의 APIView는 자동으로 csrf_exempt 적용됨
 # JWT 기반 API에서는 별도 CSRF 설정 불필요
 
-# 배포용/(근데 실제로 사용은 안했음.)
-SECURE_SSL_REDIRECT = True
+# 부하테스트용 - HTTPS 강제 비활성화
+SECURE_SSL_REDIRECT = False  # 부하테스트용 HTTP 허용
 SECURE_REDIRECT_EXEMPT = [r'^metrics/?$']  # /metrics 경로는 HTTPS 리다이렉트 제외
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = False  # 부하테스트용 HTTP 허용
+CSRF_COOKIE_SECURE = False  # 부하테스트용 HTTP 허용
 
 
 # OpenAI API 키
