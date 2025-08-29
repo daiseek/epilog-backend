@@ -48,11 +48,12 @@ class BookOfficialResponseSerializer(serializers.Serializer):
                 return obj.pdf_url
         return None
 
-class BookVideoResponseSerializer(serializers.Serializer):
-    video_id=serializers.IntegerField(source='id')
-    character_id=serializers.IntegerField(source='character.id')
-    video_url = serializers.URLField(source='video_uri') # veo3Video 필드명
-    thumbnail_url = serializers.URLField()
+# class BookVideoResponseSerializer(serializers.Serializer):
+#     video_id=serializers.IntegerField(source='id')
+#     character_id=serializers.IntegerField(source='character.id')
+#     video_url = serializers.URLField(source='video_uri') # veo3Video 필드명
+#     thumbnail_url = serializers.URLField()
+# 비디오 기능 비활성화
 
 class BookCharacterResponseSerializer(serializers.Serializer):
     character_id = serializers.IntegerField(source='id')

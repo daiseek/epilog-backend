@@ -95,7 +95,7 @@ INSTALLED_APPS = [
     # API 개발시 생성한 애플리케이션 명시
     'books', # Books 애플리케이션 추가
     'characters', # Characters 애플리케이션 추가
-    'veo3Video',
+    # 'veo3Video',  # 비디오 기능 비활성화
     'users', # Users 애플리케이션 추가
 
     'django_prometheus', # Django Prometheus 추가

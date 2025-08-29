@@ -23,7 +23,7 @@ from .serializers import (
 from .tasks import process_book_pdf_task
 
 from .models import Book
-from veo3Video.models import Video
+# from veo3Video.models import Video  # 비디오 기능 비활성화
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 # Create your views here.
@@ -384,56 +384,58 @@ class BookOfficialView(APIView):
         return Response(response_serializer.data, status=status.HTTP_200_OK)
 
 
-''' 책 동영상 API '''
-class BookVideosView(APIView):
-    permission_classes = [IsAuthenticated]  # JWT 인증 필요
+# ''' 책 동영상 API '''
+# class BookVideosView(APIView):
+#     permission_classes = [IsAuthenticated]  # JWT 인증 필요
 
-    @swagger_auto_schema(
-        operation_description="특정 책의 모든 캐릭터들의 비디오 목록을 조회합니다. (JWT 인증 필요)",
-        responses={
-            200: BookVideoResponseSerializer(many=True),
-            401: openapi.Response(description="인증 필요"),
-            404: openapi.Response(
-                description="책을 찾을 수 없음",
-                examples={"application/json": {
-                    "status": "error",
-                    "error_code": 404,
-                    "message": "책을 찾을 수 없습니다."
-                }}
-            ),
-            500: BookErrorResponseSerializer
-        },
-        tags=['책 관리']
-    )
-    def get(self, request, book_id):
-        try:
-            # 책 존재 여부 확인 (사용자별 필터링 없음)
-            book = Book.objects.get(id=book_id, is_deleted=False)
+#     @swagger_auto_schema(
+#         operation_description="특정 책의 모든 캐릭터들의 비디오 목록을 조회합니다. (JWT 인증 필요)",
+#         responses={
+#             200: BookVideoResponseSerializer(many=True),
+#             401: openapi.Response(description="인증 필요"),
+#             404: openapi.Response(
+#                 description="책을 찾을 수 없음",
+#                 examples={"application/json": {
+#                     "status": "error",
+#                     "error_code": 404,
+#                     "message": "책을 찾을 수 없습니다."
+#                 }}
+#             ),
+#             500: BookErrorResponseSerializer
+#         },
+#         tags=['책 관리']
+#     )
+#     def get(self, request, book_id):
+#         try:
+#             # 책 존재 여부 확인 (사용자별 필터링 없음)
+#             book = Book.objects.get(id=book_id, is_deleted=False)
             
-            # print(f"📚 인증된 사용자 {request.user.username}이 책 '{book.title}' 비디오 조회")
+#             # print(f"📚 인증된 사용자 {request.user.username}이 책 '{book.title}' 비디오 조회")
 
-            # 해당 책의 캐릭터들 조회
-            characters = book.characters.filter(is_deleted=False)
+#             # 해당 책의 캐릭터들 조회
+#             characters = book.characters.filter(is_deleted=False)
 
-            # 캐릭터들의 비디오들 조회
-            videos = Video.objects.filter(character__in=characters)
+#             # 캐릭터들의 비디오들 조회
+#             videos = Video.objects.filter(character__in=characters)
 
-            # 응답 데이터 직렬화
-            serializer = BookVideoResponseSerializer(videos, many=True)
-            return Response(serializer.data, status=200)
+#             # 응답 데이터 직렬화
+#             serializer = BookVideoResponseSerializer(videos, many=True)
+#             return Response(serializer.data, status=200)
 
-        except Book.DoesNotExist:
-            return Response({
-                "status": "error",
-                "error_code": 404,
-                "message": "책을 찾을 수 없습니다."
-            }, status=404)
-        except Exception as e:
-            return Response({
-                "status": "error",
-                "error_code": 500,
-                "message": "서버 내부 오류가 발생했습니다."
-            }, status=500)
+#         except Book.DoesNotExist:
+#             return Response({
+#                 "status": "error",
+#                 "error_code": 404,
+#                 "message": "책을 찾을 수 없습니다."
+#             }, status=404)
+#         except Exception as e:
+#             return Response({
+#                 "status": "error",
+#                 "error_code": 500,
+#                 "message": "서버 내부 오류가 발생했습니다."
+#             }, status=500)
+
+# 비디오 기능 비활성화됨
 
 
 ''' 책 등장인물 목록 조회 API '''

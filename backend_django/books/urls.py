@@ -1,5 +1,6 @@
 from django.urls import path
-from .views import BookFromPdfView, BookOfficialView, BookVideosView, BookFromPdfAsyncView, BookFromPdfAsyncioView  # BookStatusView는 더 이상 사용 안함
+from .views import BookFromPdfView, BookOfficialView, BookFromPdfAsyncView, BookFromPdfAsyncioView  # BookStatusView는 더 이상 사용 안함
+# from .views import BookVideosView  # 비디오 기능 비활성화
 from . import views
 
 from characters.views import (
@@ -19,7 +20,7 @@ urlpatterns = [
 
     path('official', BookOfficialView.as_view()), # 공용책 정보 API
 
-    path('<int:book_id>/videos', BookVideosView.as_view()), # 책 동영상 API
+    # path('<int:book_id>/videos', BookVideosView.as_view()), # 책 동영상 API - 비디오 기능 비활성화
 
     # === 캐릭터 관련 RESTful API => 기존에 Characters 폴더에 있었지만, RESTful 설계를 위해 옮겼습니다.===
     path('<int:book_id>/characters', CharacterConditionalCreateOrListView.as_view()), # 캐릭터 조회/생성 (동기)
