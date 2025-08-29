@@ -45,24 +45,24 @@ ALLOWED_HOSTS = ["*"]  # 부하테스트용 임시 설정
 # ⭐️ 배포용
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
-# 배포 서버
-BACKEND_DOMAIN = 'epi-log.site'
+# 부하테스트용 - 도메인 설정 비활성화
+# BACKEND_DOMAIN = 'epi-log.site'
 
-# CORS 설정 (배포용)
-CORS_ALLOWED_ORIGINS = [
-    "https://epi-log.site",
-    "http://epi-log.site",
-    "https://www.epi-log.site",
-    "http://www.epi-log.site",
-    "https://epi-log.vercel.app",
-]
+# 부하테스트용 - CORS 도메인 설정 비활성화
+# CORS_ALLOWED_ORIGINS = [
+#     "https://epi-log.site",
+#     "http://epi-log.site",
+#     "https://www.epi-log.site",
+#     "http://www.epi-log.site",
+#     "https://epi-log.vercel.app",
+# ]
 
-# 개발/테스트용 (Postman, 로컬 클라이언트 등)
-CORS_ALLOWED_ORIGIN_REGEXES = [
-    r"^https://.*\.epi-log\.site$",
-    r"^http://.*\.epi-log\.site$",
-    r"^https?://epi-log-.*\.vercel\.app$",
-]
+# 부하테스트용 - CORS 정규식 패턴 비활성화
+# CORS_ALLOWED_ORIGIN_REGEXES = [
+#     r"^https://.*\.epi-log\.site$",
+#     r"^http://.*\.epi-log\.site$",
+#     r"^https?://epi-log-.*\.vercel\.app$",
+# ]
 
 # 추가 허용 오리진 (필요시)
 # CORS_ALLOWED_ORIGINS += [
@@ -95,14 +95,14 @@ CORS_ALLOW_METHODS = [
     'OPTIONS',
 ]
 
-# CSRF 신뢰할 수 있는 출처 설정
-CSRF_TRUSTED_ORIGINS = [
-    "https://epi-log.site",
-    "http://epi-log.site", 
-    "https://www.epi-log.site",
-    "http://www.epi-log.site",
-    "https://epi-log.vercel.app",
-]
+# 부하테스트용 - CSRF 도메인 설정 비활성화
+# CSRF_TRUSTED_ORIGINS = [
+#     "https://epi-log.site",
+#     "http://epi-log.site", 
+#     "https://www.epi-log.site",
+#     "http://www.epi-log.site",
+#     "https://epi-log.vercel.app",
+# ]
 
 # 참고: Django REST Framework의 APIView는 자동으로 csrf_exempt 적용됨
 # JWT 기반 API에서는 별도 CSRF 설정 불필요
@@ -374,7 +374,7 @@ SIMPLE_JWT = {
     "AUTH_COOKIE_SECURE": True,     # 운영이면 True 필수
     "AUTH_COOKIE_HTTP_ONLY": True,
     "AUTH_COOKIE_PATH": "/",
-    "AUTH_COOKIE_DOMAIN": "epi-log.site",
+    # "AUTH_COOKIE_DOMAIN": "epi-log.site",  # 부하테스트용 도메인 비활성화
     "AUTH_COOKIE_ACCESS_MAX_AGE": 60 * 60 * 24,
     "AUTH_COOKIE_REFRESH_MAX_AGE": 60 * 60 * 24 * 7,
     
