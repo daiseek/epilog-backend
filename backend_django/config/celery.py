@@ -11,7 +11,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 # 환경변수 DJANGO_ENV에 따라 적절한 .env 파일 로드
 django_env = os.environ.get('DJANGO_ENV', 'dev')
 if django_env == 'prod':
-    environ.Env.read_env(env_file=os.path.join(BASE_DIR, '.env.prod'))
+    environ.Env.read_env(env_file=os.path.join(BASE_DIR, '.env'))
     settings_module = 'config.settings_prod'
 else:
     environ.Env.read_env(env_file=os.path.join(BASE_DIR, '.env.dev'))

@@ -60,17 +60,18 @@ services:
       timeout: 10s
       retries: 5
     tty: true
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.rabbitmq.rule=Host(`rabbitmq.epi-log.site`)"
-      - "traefik.http.routers.rabbitmq.entrypoints=websecure"
-      - "traefik.http.routers.rabbitmq.tls=true"
-      - "traefik.http.routers.rabbitmq.tls.certresolver=letsencrypt"
-      - "traefik.http.services.rabbitmq.loadbalancer.server.port=15672"
-
-      # Loki 로그 수집 설정
-      - "logging=promtail"
-      - "logging_jobname=rabbitmq"
+    # 부하테스트용 - Traefik 설정 비활성화
+    # labels:
+    #   - "traefik.enable=true"
+    #   - "traefik.http.routers.rabbitmq.rule=Host(`rabbitmq.epi-log.site`)"
+    #   - "traefik.http.routers.rabbitmq.entrypoints=websecure"
+    #   - "traefik.http.routers.rabbitmq.tls=true"
+    #   - "traefik.http.routers.rabbitmq.tls.certresolver=letsencrypt"
+    #   - "traefik.http.services.rabbitmq.loadbalancer.server.port=15672"
+    #
+    #   # Loki 로그 수집 설정
+    #   - "logging=promtail"
+    #   - "logging_jobname=rabbitmq"
     networks:
       - backend-net
 
@@ -94,7 +95,7 @@ services:
       backend-rabbitmq:
         condition: service_healthy
     env_file:
-      - ./.env.prod
+      - ./.env
     environment:
       DJANGO_ENV: prod # 배포 환경 설정
       # GOOGLE_APPLICATION_CREDENTIALS: /app/gcp-key.json # veo3 key 컨테이너 내부 경로 (비활성화)
@@ -103,22 +104,22 @@ services:
     networks:
       - backend-net
 
-    # ⭐️ 배포용
-    labels:
-      - "traefik.enable=true"
-      # HTTPS 라우터 설정 (Traefik에서 자동으로 HTTP를 HTTPS로 리다이렉트)
-      - "traefik.http.routers.backend-django.rule=Host(`epi-log.site`, `www.epi-log.site`)"
-      - "traefik.http.routers.backend-django.entrypoints=websecure"
-      - "traefik.http.routers.backend-django.tls=true"
-      - "traefik.http.routers.backend-django.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.backend-django.service=backend-django-service"
-
-      # 서비스 포트 설정 - 중요!
-      - "traefik.http.services.backend-django-service.loadbalancer.server.port=8000"
-
-      # Loki 로그 수집 설정
-      - "logging=promtail"
-      - "logging_jobname=django-backend"
+    # ⭐️ 부하테스트용 - Traefik 설정 비활성화
+    # labels:
+    #   - "traefik.enable=true"
+    #   # HTTPS 라우터 설정 (Traefik에서 자동으로 HTTP를 HTTPS로 리다이렉트)
+    #   - "traefik.http.routers.backend-django.rule=Host(`epi-log.site`, `www.epi-log.site`)"
+    #   - "traefik.http.routers.backend-django.entrypoints=websecure"
+    #   - "traefik.http.routers.backend-django.tls=true"
+    #   - "traefik.http.routers.backend-django.tls.certresolver=letsencrypt"
+    #   - "traefik.http.routers.backend-django.service=backend-django-service"
+    #
+    #   # 서비스 포트 설정 - 중요!
+    #   - "traefik.http.services.backend-django-service.loadbalancer.server.port=8000"
+    #
+    #   # Loki 로그 수집 설정
+    #   - "logging=promtail"
+    #   - "logging_jobname=django-backend"
 
   # Celery Worker 서비스 설정
   backend-celery-worker:
@@ -136,7 +137,7 @@ services:
       backend-database:
         condition: service_healthy
     env_file:
-      - ./.env.prod
+      - ./.env
     environment:
       DJANGO_ENV: prod
       # GOOGLE_APPLICATION_CREDENTIALS: /app/gcp-key.json # GCP 인증 정보 (비활성화)
@@ -164,23 +165,24 @@ services:
       backend-redis:
         condition: service_started
     env_file:
-      - ./.env.prod
+      - ./.env
     environment:
       DJANGO_ENV: prod
       CELERY_BROKER_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@backend-rabbitmq:5672//
       CELERY_RESULT_BACKEND: redis://backend-redis:6379/0
-    labels:
-      # Traefik 라우팅 설정
-      - "traefik.enable=true"
-      - "traefik.http.routers.flower.rule=Host(`flower.epi-log.site`)"
-      - "traefik.http.routers.flower.entrypoints=websecure"
-      - "traefik.http.routers.flower.tls=true"
-      - "traefik.http.routers.flower.tls.certresolver=letsencrypt"
-      - "traefik.http.services.flower.loadbalancer.server.port=5555"
-
-      # Loki 로그 수집 설정
-      - "logging=promtail"
-      - "logging_jobname=celery-flower"
+    # 부하테스트용 - Traefik 설정 비활성화
+    # labels:
+    #   # Traefik 라우팅 설정
+    #   - "traefik.enable=true"
+    #   - "traefik.http.routers.flower.rule=Host(`flower.epi-log.site`)"
+    #   - "traefik.http.routers.flower.entrypoints=websecure"
+    #   - "traefik.http.routers.flower.tls=true"
+    #   - "traefik.http.routers.flower.tls.certresolver=letsencrypt"
+    #   - "traefik.http.services.flower.loadbalancer.server.port=5555"
+    #
+    #   # Loki 로그 수집 설정
+    #   - "logging=promtail"
+    #   - "logging_jobname=celery-flower"
     networks:
       - backend-net
 
@@ -197,7 +199,7 @@ services:
       backend-redis:
         condition: service_started
     env_file:
-      - ./.env.prod
+      - ./.env
     environment:
       DJANGO_ENV: prod
       CELERY_BROKER_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@backend-rabbitmq:5672//
@@ -212,7 +214,7 @@ services:
     networks:
       - backend-net
 
-  # Prometheus 모니터링 서비스 설정
+  # Prometheus 모니터링 서비스 설정 (부하테스트용)
   backend-prometheus:
     image: prom/prometheus:v2.45.6
     container_name: backend-prometheus
@@ -220,17 +222,18 @@ services:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
-    labels:
-      - "traefik.enable=false" # 외부 접근 차단 (내부 전용)
-      - "logging=promtail"
-      - "logging_jobname=containerlogs"
+    # 부하테스트용 - Traefik 설정 비활성화
+    # labels:
+    #   - "traefik.enable=false" # 외부 접근 차단 (내부 전용)
+    #   - "logging=promtail"
+    #   - "logging_jobname=containerlogs"
 
     ports:
-      - "29090:9090"
+      - "9090:9090"  # 부하테스트용 - 직접 포트 접근
     networks:
       - backend-net
 
-  # Grafana 모니터링 서비스 설정
+  # Grafana 모니터링 서비스 설정 (부하테스트용 - 포트 직접 접근)
   backend-grafana:
     image: grafana/grafana:10.4.0
     container_name: backend-grafana
@@ -243,55 +246,58 @@ services:
       - ./grafana/provisioning:/etc/grafana/provisioning # Grafana 프로비저닝 (설정)
       - grafana_data:/var/lib/grafana # Grafana 데이터 (대시보드 등)
     ports:
-      - "23000:3000" # Grafana는 기본적으로 3000번 포트입니다
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.grafana.rule=Host(`grafana.epi-log.site`)"
-      - "traefik.http.routers.grafana.entrypoints=websecure"
-      - "traefik.http.routers.grafana.tls=true"
-      - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
-      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
-
-      # Loki 로그 수집 설정
-      - "logging=promtail"
-      - "logging_jobname=grafana"
+      - "3000:3000" # 부하테스트용 - 직접 포트 접근
+    # 부하테스트용 - Traefik 설정 비활성화 (포트로 직접 접근)
+    # labels:
+    #   - "traefik.enable=true"
+    #   - "traefik.http.routers.grafana.rule=Host(`grafana.epi-log.site`)"
+    #   - "traefik.http.routers.grafana.entrypoints=websecure"
+    #   - "traefik.http.routers.grafana.tls=true"
+    #   - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
+    #   - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+    #
+    #   # Loki 로그 수집 설정
+    #   - "logging=promtail"
+    #   - "logging_jobname=grafana"
 
     networks:
       - backend-net
 
-  backend-traefik:
-    image: traefik:v2.9
-    container_name: backend-traefik
-    command:
-      - "--api.insecure=false"
-      - "--providers.docker=true"
-      - "--entrypoints.web.address=:80"
-      - "--api.dashboard=true"
-      - "--accesslog=true" # 이 라인 추가
-      - "--accesslog.filepath=/var/log/traefik/access.log" # (선택 사항) 파일로 저장
-      - "--accesslog.format=json" # (선택 사항) JSON 형식으로 로그
-      - "--log.level=DEBUG" # 디버그 레벨 로그 (자세한 정보)
-      - "--entrypoints.websecure.address=:443" # 중요 - Traefik이 HTTPS 요청을 수신할 포트 443을 열음
-      - "--entrypoints.web.http.redirections.entrypoint.to=websecure" # 중요 - HTTP 요청을 HTTPS로 리다이렉트
-      - "--entrypoints.web.http.redirections.entrypoint.scheme=https" # 중요 => HTTPS 강제 적용
-      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true" # 중요 - Let's Encrypt를 사용하여 TLS 인증서를 자동으로 발급받음
-      - "--certificatesresolvers.letsencrypt.acme.email=dnjsgml0578@gmail.com" # 중요 - 인증 관련 알림을 받을때 필요, Let's Encrypt에 자동으로 등록됨
-      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json" # 중요 - 인증서 저장 위치, 해당 경로를 볼륨에 마운팅하여 영구 저장됨
-    ports:
-      - "80:80"
-      - "443:443" # 중요
-      - "8090:8090" # Traefik 대시보드 포트
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - traefik-certificates:/letsencrypt # 중요
-    labels:
-      # Loki 로그 수집 설정
-      - "logging=promtail"
-      - "logging_jobname=traefik"
-    networks:
-      - backend-net
+  # 부하테스트용이므로 Traefik 서비스 비활성화
+  # backend-traefik:
+  #   image: traefik:v2.9
+  #   container_name: backend-traefik
+  #   command:
+  #     - "--api.insecure=false"
+  #     - "--providers.docker=true"
+  #     - "--entrypoints.web.address=:80"
+  #     - "--api.dashboard=true"
+  #     - "--accesslog=true" # 이 라인 추가
+  #     - "--accesslog.filepath=/var/log/traefik/access.log" # (선택 사항) 파일로 저장
+  #     - "--accesslog.format=json" # (선택 사항) JSON 형식으로 로그
+  #     - "--log.level=DEBUG" # 디버그 레벨 로그 (자세한 정보)
+  #     - "--entrypoints.websecure.address=:443" # 중요 - Traefik이 HTTPS 요청을 수신할 포트 443을 열음
+  #     - "--entrypoints.web.http.redirections.entrypoint.to=websecure" # 중요 - HTTP 요청을 HTTPS로 리다이렉트
+  #     - "--entrypoints.web.http.redirections.entrypoint.scheme=https" # 중요 => HTTPS 강제 적용
+  #     - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true" # 중요 - Let's Encrypt를 사용하여 TLS 인증서를 자동으로 발급받음
+  #     - "--certificatesresolvers.letsencrypt.acme.email=dnjsgml0578@gmail.com" # 중요 - 인증 관련 알림을 받을때 필요, Let's Encrypt에 자동으로 등록됨
+  #     - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json" # 중요 - 인증서 저장 위치, 해당 경로를 볼륨에 마운팅하여 영구 저장됨
+  #   ports:
+  #     - "80:80"
+  #     - "443:443" # 중요
+  #     - "8090:8090" # Traefik 대시보드 포트
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #     - traefik-certificates:/letsencrypt # 중요
+  #   labels:
+  #     # Loki 로그 수집 설정
+  #     - "logging=promtail"
+  #     - "logging_jobname=traefik"
+  #   networks:
+  #     - backend-net
 
-  backend-portainer:
+  # 부하테스트용 - Portainer 관리 서비스 비활성화
+  # backend-portainer:
     image: portainer/portainer-ce:latest
     container_name: backend-portainer
     ports:
@@ -299,17 +305,19 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - portainer_data:/data
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.portainer.rule=Host(`portainer.epi-log.site`)"
-      - "traefik.http.routers.portainer.entrypoints=websecure"
-      - "traefik.http.routers.portainer.tls=true"
-      - "traefik.http.routers.portainer.tls.certresolver=letsencrypt"
-      - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+    # 부하테스트용 - Traefik 설정 비활성화
+    # labels:
+    #   - "traefik.enable=true"
+    #   - "traefik.http.routers.portainer.rule=Host(`portainer.epi-log.site`)"
+    #   - "traefik.http.routers.portainer.entrypoints=websecure"
+    #   - "traefik.http.routers.portainer.tls=true"
+    #   - "traefik.http.routers.portainer.tls.certresolver=letsencrypt"
+    #   - "traefik.http.services.portainer.loadbalancer.server.port=9000"
     networks:
       - backend-net
 
-  backend-loki:
+  # 부하테스트용 - Loki 로그 수집 서비스 비활성화
+  # backend-loki:
     image: grafana/loki:latest
     container_name: backend-loki
     ports:
@@ -320,7 +328,8 @@ services:
     networks:
       - backend-net
 
-  backend-promtail:
+  # 부하테스트용 - Promtail 로그 수집 서비스 비활성화
+  # backend-promtail:
     image: grafana/promtail:latest
     container_name: backend-promtail
     volumes:
@@ -337,6 +346,7 @@ services:
     networks:
       - backend-net
 
+  # cAdvisor 모니터링 서비스 설정 (부하테스트용)
   backend-cadvisor:
     image: gcr.io/cadvisor/cadvisor:latest
     container_name: backend-cadvisor
@@ -350,26 +360,28 @@ services:
       - /var/lib/docker:/var/lib/docker:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     ports:
-      - "28080:8080"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.cadvisor.rule=Host(`cadvisor.epi-log.site`)"
-      - "traefik.http.routers.cadvisor.entrypoints=websecure"
-      - "traefik.http.routers.cadvisor.tls=true"
-      - "traefik.http.routers.cadvisor.tls.certresolver=letsencrypt"
-      - "traefik.http.services.cadvisor.loadbalancer.server.port=8080"
-
-      # Loki 로그 수집 설정
-      - "logging=promtail"
-      - "logging_jobname=cadvisor"
+      - "8080:8080"  # 부하테스트용 - 직접 포트 접근
+    # 부하테스트용 - Traefik 설정 비활성화 (포트로 직접 접근)
+    # labels:
+    #   - "traefik.enable=true"
+    #   - "traefik.http.routers.cadvisor.rule=Host(`cadvisor.epi-log.site`)"
+    #   - "traefik.http.routers.cadvisor.entrypoints=websecure"
+    #   - "traefik.http.routers.cadvisor.tls=true"
+    #   - "traefik.http.routers.cadvisor.tls.certresolver=letsencrypt"
+    #   - "traefik.http.services.cadvisor.loadbalancer.server.port=8080"
+    #
+    #   # Loki 로그 수집 설정
+    #   - "logging=promtail"
+    #   - "logging_jobname=cadvisor"
     networks:
       - backend-net
 
+  # Node Exporter 모니터링 서비스 설정 (부하테스트용)
   backend-node_exporter: #서비스 이름
     image: quay.io/prometheus/node-exporter:v1.8.1 #이미지
     container_name: backend-node_exporter
     ports:
-      - "29100:9100" #포트 9100 매핑
+      - "9100:9100" #부하테스트용 - 직접 포트 접근
     command:
       - "--path.rootfs=/host" #루트 파일 시스템을 볼륨에 설정한 host/로 설정
     restart: unless-stopped #멈추면 다시 시작
@@ -382,8 +394,8 @@ services:
 volumes:
   mysql_data:
   grafana_data:
-  traefik-certificates: # 중요 - Traefik 인증서 저장소
-  portainer_data:
+  # traefik-certificates: # 중요 - Traefik 인증서 저장소 (부하테스트용 비활성화)
+  # portainer_data: # 부하테스트용 - Portainer 비활성화
 
 # 컨테이너 네트워크 설정
 networks:
