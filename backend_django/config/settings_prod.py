@@ -26,9 +26,9 @@ env = environ.Env(
     DEBUG=(bool, False)
 )
 
-# reading .env.dev file
+# reading .env file
 environ.Env.read_env(
-    env_file=os.path.join(BASE_DIR, '.env.prod')
+    env_file=os.path.join(BASE_DIR, '.env')
 )
 
 # False if not in os.environ because of casting above
