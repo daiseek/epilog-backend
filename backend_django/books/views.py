@@ -14,7 +14,7 @@ from books.s3_client import upload_to_s3 # S3에 파일을 업로드하는 함�
 from .serializers import (
     BookPdfUploadSerializer,
     BookOfficialResponseSerializer,
-    BookVideoResponseSerializer,
+    # BookVideoResponseSerializer,  # 비디오 기능 비활성화
     BookCharacterResponseSerializer,
     BookErrorResponseSerializer,
     BookSuccessResponseSerializer,
