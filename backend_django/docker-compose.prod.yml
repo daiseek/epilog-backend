@@ -125,7 +125,7 @@ services:
   backend-celery-worker:
     build: .
     container_name: backend-celery-worker
-    command: sh -c "uv pip install --system --no-cache-dir -r requirements.txt && celery -A config worker -l info --concurrency=4"
+    command: sh -c "uv pip install --system --no-cache-dir -r requirements.txt && celery -A config worker -l info --concurrency=1"
     volumes:
       - .:/backend
       # - ./gcp-key.json:/app/gcp-key.json # GCP 키 파일 마운트 (비활성화)
